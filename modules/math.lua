@@ -37,3 +37,17 @@ math.Dist = math.Distance
 function Lerp(delta, a, b)
     return a + ((b - a) * delta)
 end
+
+function math.NormalizeAngle(a)
+    return (a + 180) % 360 - 180
+end
+
+function math.AngleDifference(a, b)
+    local diff = ((a - b) + 180) % 360 - 180
+
+    if (diff < 180) then
+        return diff
+    end
+
+    return diff - 360
+end
