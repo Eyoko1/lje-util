@@ -34,7 +34,7 @@ function string.Explode(separator, str, withpattern)
     end
 
     local dopattern = not withpattern
-    local ret = {"", ""} --> the table is guaranteed to have at least two elements in it - this saves some re-allocations
+    local ret = {""} --> the table is guaranteed to have at least one element in it - this saves a re-allocation
 	local currentpos = 1
 
     local i = 1
@@ -44,13 +44,13 @@ function string.Explode(separator, str, withpattern)
         ret[i] = string_sub(str, currentpos, startpos - 1)
         currentpos = endpos + 1
 
+        i = i + 1
         if (i ~= length) then
-            i = i + 1
             goto explode
         end
     end
 
-	ret[i + 1] = string_sub(str, currentpos)
+	ret[i] = string_sub(str, currentpos)
 
 	return ret
 end

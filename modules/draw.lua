@@ -158,9 +158,8 @@ local function __drawtext(text, x, y, xalign)
 end
 
 function draw.DrawText(text, font, x, y, colour, xalign)
+    -- When would anyone ever not pass these arguments?
     text = tostring(text)
-    font = font or "DermaDefault"
-    -- When would anyone ever not pass the other arguments?
 
     surface_SetFont(font)
     local lineheight = cachednlheights[font] or __getcachednlheight(font)
@@ -170,27 +169,24 @@ function draw.DrawText(text, font, x, y, colour, xalign)
 
     surface_SetTextColor(colour or white)
 
-    local length = #text
     local i = 1
     ::outer::
     local nextnewline = string_find(text, "\n", i)
-    local substring = string_sub(text, i, nextnewline or length)
+    local substring = string_sub(text, i, nextnewline)
 
-    local substringlength = #substring
     local j = 1
     ::inner::
     local nexttab = string_find(substring, "\t", j)
     if (nexttab) then
         if (nexttab ~= j) then
-            local substring2 = string_sub(substring, j, nexttab)
-            currentx = currentx + __drawtext(substring2, currentx, currenty, xalign)
+            currentx = currentx + __drawtext(string_sub(substring, j, nexttab), currentx, currenty, xalign)
         end
 
         j = nexttab + 1
         currentx = currentx + 50--[[tabwidth]]
         goto inner
     else
-        __drawtext(string_sub(substring, j, substringlength), currentx, currenty, xalign)
+        __drawtext(string_sub(substring, j), currentx, currenty, xalign)
         -- Fall through
     end
 

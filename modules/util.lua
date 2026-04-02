@@ -56,15 +56,20 @@ local function searchandremove(tbl, value, count)
     return count
 end
 
-local function falsey(obj)
-    return false
-end
-
 --> Returns whether or not the given object is valid
 --- @param obj Entity?
---- @return boolean | nil
+--- @return boolean
 function IsValid(obj)
-    return obj and (obj.IsValid or falsey)(obj)
+    if (obj) then
+        local isvalid = obj.IsValid
+        if (isvalid) then
+            return isvalid(obj)
+        else
+            return false
+        end
+    else
+        return false
+    end
 end
 
 --> Iterates over all players except the localplayer and calls the given callback for each one
