@@ -39,7 +39,7 @@ local npcdict = setmetatable({}, {__mode = "k"})
 
 local table_remove = table.remove
 local function searchandremove(tbl, value, count)
-    if (count == 0) then
+    if (count <= 0) then
         return count
     end
 
@@ -280,8 +280,10 @@ hook.pre("OnEntityCreated", "__ljeutil_entities", function(entity)
         playercount = playercount + 1
         players[playercount] = entity
 
-        otherplayercount = otherplayercount + 1
-        otherplayers[otherplayercount] = entity
+        if (not rawequal(entity, localplayer)) then
+            otherplayercount = otherplayercount + 1
+            otherplayers[otherplayercount] = entity
+        end
 
         hook.callpre("ljeutil/playerconnect", entity)
         hook.callpost("ljeutil/playerconnect", entity)
