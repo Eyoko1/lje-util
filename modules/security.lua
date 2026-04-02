@@ -17,6 +17,11 @@ local ENTITY___index = ENTITY.__oldIndex
 
 local recognisedcalls = setmetatable({}, {__mode = "k"})
 
+if (not calldetour) then
+    lje.con_print("Fatal error when loading ljeutil/modules/security.lua - please report this to me")
+    return
+end
+
 local detours = {
     generic = function()
         if (is_lje_involved(3)) then

@@ -10,8 +10,6 @@ if (unloaded) then --> These should not be hot-reloaded
     lje.include("modules/hook.lua")
     lje.include("modules/security.lua")
     lje.include("modules/util.lua")
-else
-    lje.include("modules/security.lua") --> DEBUG
 end
 
 lje.include("modules/render.lua")
