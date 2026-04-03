@@ -296,27 +296,27 @@ function hook.__calldetour(originalcall, event, gm, ...)
             return originalcall(event, gm, ...)
         end
 
-        local node = hooks[PRE_HOOK_NODE]
+        local node = hooks[1--[[PRE_HOOK_NODE]]]
         ::execute_pre_disabled::
         if (node) then
-            local a, b, c, d, e, f = node[NODE_CALLBACK](...)
+            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
             if (a ~= nil) then
                 return a, b, c, d, e, f
             end
             
-            node = node[NODE_NEXT]
+            node = node[3--[[NODE_NEXT]]]
             goto execute_pre_disabled
         end
 
-        node = hooks[POST_HOOK_NODE]
+        node = hooks[2--[[POST_HOOK_NODE]]]
         ::execute_post_disabled::
         if (node) then
-            local a, b, c, d, e, f = node[NODE_CALLBACK](...)
+            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
             if (a ~= nil) then
                 return a, b, c, d, e, f
             end
             
-            node = node[NODE_NEXT]
+            node = node[3--[[NODE_NEXT]]]
             goto execute_post_disabled
         end
     else
@@ -329,29 +329,29 @@ function hook.__calldetour(originalcall, event, gm, ...)
             return originalcall(event, gm, ...)
         end
 
-        local node = hooks[PRE_HOOK_NODE]
+        local node = hooks[1--[[PRE_HOOK_NODE]]]
         ::execute_pre::
         if (node) then
-            local a, b, c, d, e, f = node[NODE_CALLBACK](...)
+            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
             if (a ~= nil) then
                 return a, b, c, d, e, f
             end
             
-            node = node[NODE_NEXT]
+            node = node[3--[[NODE_NEXT]]]
             goto execute_pre
         end
 
         local a2, b2, c2, d2, e2, f2 = originalcall(event, gm, ...)
 
-        node = hooks[POST_HOOK_NODE]
+        node = hooks[2--[[POST_HOOK_NODE]]]
         ::execute_post::
         if (node) then
-            local a, b, c, d, e, f = node[NODE_CALLBACK](...)
+            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
             if (a ~= nil) then
                 return a, b, c, d, e, f
             end
 
-            node = node[NODE_NEXT]
+            node = node[3--[[NODE_NEXT]]]
             goto execute_post
         end
 
