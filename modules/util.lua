@@ -1,6 +1,36 @@
 --> [util.lua] <--
 --> Adds / optimises various useful functions <--
 
+--- @type Entity
+ENTITY = cloned_mts.Entity
+
+--- @type Player
+PLAYER = cloned_mts.Player
+
+--- @type Vector
+VECTOR = cloned_mts.Vector
+
+--- @type Angle
+ANGLE = cloned_mts.Angle
+
+--- @type CUserCmd
+CUSERCMD = cloned_mts.CUserCmd
+
+--- @type File
+FILE = cloned_mts.File
+
+--- @type ConVar
+CONVAR = cloned_mts.ConVar
+
+--- @type VMatrix
+VMATRIX = cloned_mts.VMatrix
+
+--- @type Weapon
+WEAPON = cloned_mts.Weapon
+
+--- @class Vector
+--- @field __sub fun(self: Vector, other: Vector)
+
 local ENTITY = cloned_mts.Entity
 local player_GetAll = player.GetAll
 local player_GetCount = player.GetCount

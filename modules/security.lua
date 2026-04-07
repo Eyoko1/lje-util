@@ -3,6 +3,7 @@
 
 local rawget = rawget
 local rawequal = rawequal
+local istable = istable
 local isentity = isentity
 local _G = _G
 local calldetour = hook.__calldetour
@@ -71,7 +72,7 @@ lje.vm.set_engine_call_hook(function(func, nargs, nresults, ...)
 
     --> Detouring hook.Call - we cannot set up a variable that is set to true once this is found, since hook.Call can be changed at any time
     local hook = rawget(_G,  "hook")
-    if (hook) then
+    if (hook and istable(hook)) then
         local call = rawget(hook, "Call")
         if (rawequal(func, call)) then
             recognisedcalls[func] = detours.hookcall
