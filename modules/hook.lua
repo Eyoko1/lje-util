@@ -316,6 +316,8 @@ function hook.__calldetour(originalcall, event, gm, ...)
             goto execute_pre_disabled
         end
 
+        a2, b2, c2, d2, e2, f2 = nil, nil, nil, nil, nil, nil
+
         node = hooks[2--[[POST_HOOK_NODE]]]
         ::execute_post_disabled::
         if (node) then
