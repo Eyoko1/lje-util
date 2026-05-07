@@ -20,6 +20,7 @@ lje.include("modules/draw.lua")
 lje.include("modules/file.lua")
 lje.include("modules/media.lua")
 lje.include("modules/convars.lua")
+lje.include("modules/timer.lua")
 lje.include("modules/input.lua")
 if (RUN_BENCHMARKS) then
     lje.include("modules/__benchmark.lua")
