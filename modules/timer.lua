@@ -2,14 +2,26 @@ local timer = {}
 local CurTime = rawget(_G, "CurTime")
 local LastCurTime = CurTime()
 
--- print(tostring(CurTime) .. "timer") -> Forgot to comment this out oops
-
 local function RandomString()
     local s = "______"
     for i = 1, 16 do
         s = s .. string.char(math.random(97, 122))
     end
     return s
+end
+
+local function CopyTable(t)
+    local copy = {}
+
+    for index, value in pairs(t) do
+        if type(value) ~= "table" then
+            copy[index] = value
+        else
+            copy[index] = CopyTable(value)
+        end
+    end
+
+    return copy
 end
 
 local Timers = { -- This is kind of unoptimized
@@ -40,7 +52,6 @@ function timer.Create(identifier, delay, repetitions, func)
         new.repetitions = repetitions
         new.reps = 0
     end
-
     Timers[identifier] = new
 end
 
@@ -120,11 +131,11 @@ end
 
 -- Hook --
 
-hook.pre("think", RandomString() .. "_timer", function()
+hook.pre("Think", RandomString() .. "_timer", function()
     local dt = CurTime() - LastCurTime -- deltatime
 
     if dt < 0 then
-        return
+        return -- wait a bit more for deltatime to be above 0 since we are too early
     end
 
     LastCurTime = CurTime()
