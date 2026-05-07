@@ -2,7 +2,7 @@ local timer = {}
 local CurTime = rawget(_G, "CurTime")
 local LastCurTime = CurTime()
 
-print(tostring(CurTime) .. "timer")
+-- print(tostring(CurTime) .. "timer") -> Forgot to comment this out oops
 
 local function RandomString()
     local s = "______"
