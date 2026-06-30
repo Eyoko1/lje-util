@@ -1,7 +1,9 @@
 --> [file.lua] <--
 --> Re-implements some file.* functions <--
 
-local FILE = cloned_mts.File
+local _R = lje.util.get_registry()
+
+local FILE = _R.File
 
 local FILE_Read = FILE.Read
 local FILE_Size = FILE.Size

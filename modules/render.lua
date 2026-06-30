@@ -94,8 +94,8 @@ hook.post("PostRender", "__safert", function()
 
     cam_Start2D()
         render_PushRenderTarget(safert)
-            hook_callpre("ljeutil/render")
-            hook_callpre("ljeutil/postrender")
+            hook_callpre("lje-util/render")
+            hook_callpre("lje-util/postrender")
 
             render_PushRenderTarget(nil) --> Push main frame buffer
                 if (overrideblend) then
@@ -112,8 +112,8 @@ hook.post("PostRender", "__safert", function()
                 end
             render_PopRenderTarget()
 
-            hook_callpost("ljeutil/render")
-            hook_callpost("ljeutil/postrender")
+            hook_callpost("lje-util/render")
+            hook_callpost("lje-util/postrender")
 
             render_Clear(0, 0, 0, 0, true, true)
         render_PopRenderTarget()

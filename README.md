@@ -1,13 +1,16 @@
-# ljeutil
+# lje-util
 A utility library made for [LJ-Expand](https://github.com/lj-expand/lj-expand/) which re-adds a lot of functions implemented purely in GLua, as well as new functions which would be useful, and provides security features which would otherwise need to be manually created
 
+# Important
+- Before using lje-util, I advise that you read this entire file as it contains information that is important for avoiding potential detections
+
 # Best practices
-- When rendering anything to the screen, push 'lje.util.rendertarget' to the screen before, and then pop it after
-- Use the utility functions provided by ljeutil instead of making your own implementations
-- Do not modify the table returned by player.GetAll
-- Disabling debug hooks, metatables, and saving/restoring the random state is not necessary for lua hooks, but should still be done in other places such as detours
-- If you have any issues with this library you can contact me through the LJE Discord server, or directly with my username: 'eyoko1'
-- Use sumneko's lua language server (and the Garry's Mod addon) to get annotations for ljeutil
+- When rendering anything to the screen, push the safe rendertarget called 'lje.util.rendertarget'  to the screen before rendering, and then pop it after
+- Do **not** modify the table returned by player.GetAll
+- If you have any issues with this library you can contact me through the LJE Discord server, or directly with my discord username: 'eyoko1'
+- You can also contact me if you have any questions ^^^
+- Use sumneko's lua language server (and the Garry's Mod addon) to get annotations for lje-util
+- If you are re-rendering the scene (for something like freecam), you must call lje.util.overrideblend()
 
 # List of added hooks
 ```lua
@@ -15,53 +18,32 @@ A utility library made for [LJ-Expand](https://github.com/lj-expand/lj-expand/) 
 {
     ----------------------------------------------------------------------
     --> Called when the safe render target is drawn to the screen
-    "ljeutil/render", --> (): nil
+    "lje-util/render", --> (): nil
     ----------------------------------------------------------------------
-    --> Called immediately after 'ljeutil/render' hooks
-    "ljeutil/postrender", --> (): nil
+    --> Called immediately after 'lje-util/render' hooks
+    "lje-util/postrender", --> (): nil
     ----------------------------------------------------------------------
     --> Called when a player joins the server
     --> [1] player: Player
-    "ljeutil/playerconnect", --> (player: Player): nil
+    "lje-util/playerconnect", --> (player: Player): nil
     ----------------------------------------------------------------------
     --> Called when a player leaves the server
     --> [1] player: Player
-    "ljeutil/playerdisconnect", --> (player: Player): nil
-    ----------------------------------------------------------------------
-    --> Called when an engine call targets a function which is not currently recognised - arguments are shared with set_engine_call_hook
-    --> [1] func: fun(...): ...
-    --> [2] nargs: integer
-    --> [3] nresults: integer
-    --> [4] ...: any
-    --> Return either a function, or nil
-    "ljeutil/unknownenginecall",
-        --> Example:
-        hook.pre("ljeutil/unknownenginecall", "example", function(func, nargs, nresults, ...)
-            --> this function is rarely called so this doesn't matter too much
-            if (func == lje.get_global("matproxy", "Call")) then
-                return function(func, ...)
-                    if (freecam:isenabled()) then
-                        lje.vm.handle_engine_call()
-                        return
-                    end
-                end
-            end
-        end)
-    ----------------------------------------------------------------------
-    --> Called when a convar is changed - exactly the same as cvars.OnConVarChanged / cvars.AddChangeCallback
-    --> [1] name: string
-    --> [2] oldvalue: string
-    --> [3] newvalue: string
-    "ljeutil/convarchanged",
+    "lje-util/playerdisconnect", --> (player: Player): nil
     ----------------------------------------------------------------------
     --> Provides a context where you can use lje.input.* functions - only the pre hook provides this context
     --> [1] cusercmd: CUserCmd
-    "ljeutil/input"
+    "lje-util/input"
     ----------------------------------------------------------------------
 }
 ```
 
+# Redundancy / deprecated notice:
+- `lje.util.is_player` : You can safely replace these calls with `entity:IsPlayer()` since metatables are remapped automatically by LJE
+- `lje.util.is_npc` : You can safely replace these calls with `entity:IsNPC()` since metatables are remapped automatically by LJE
+
 # List of (re)added functions
+- A more comprehensive set of documentation is available in the files themselves
 ```lua
 { --> draw
     SimpleText = function(text, font, x, y, color, xalign, yalign) end,
@@ -116,13 +98,6 @@ A utility library made for [LJ-Expand](https://github.com/lj-expand/lj-expand/) 
 
     callpre = function(event, ...) end, --> executes lje callbacks for the given pre hook event
     callpost = function(event, ...) end, --> executes lje callbacks for the given post hook event
-
-    disable = function(disableljehooks) end, --> stops hooks from running - useful when re-rendering the scene, or using DrawModel - if disableljehooks is false (must be specified) then hooks registered with this library will still be called, otherwise if true or not specified, they will not be called
-    enable = function() end, --> re-enables hooks
-    isdisabled = function() end, --> returns whether or not hooks are disabled
-
-    disallowlua = function() end, --> sets a flag to true that prevents lje hooks from being called when lua is in the callstack (any lua, not just foreign lua)
-    allowlua = function() end --> sets the above flag to false
 }
 
 { --> cam
@@ -157,10 +132,9 @@ A utility library made for [LJ-Expand](https://github.com/lj-expand/lj-expand/) 
     random_string = function(length) end, --> generates a random string with either the given length, or 32 characters if not specified
     color_strict = function(r, g, b, a) end, --> very fast implementation of color - all arguments must be specified and must be numbers - values are still clamped
     is_player = function(entity) end, --> should be used instead of ENTITY.IsPlayer or PLAYER.IsPlayer
-    is_npc = function(entity) end, --> should be used instead of ENTITY.IsNPC or NPC.IsNPC
+    is_npc = function(entity) end, --> should be used instead of ENTITY.IsNPC or NPC.IsNPC (calling entity:IsNPC() is fine however)
     get_mutable_players = function() end, --> equivalent to player.GetAll, but the value returned can be modified
-    disable_engine_calls = function() end, --> disables all calls to engine functions
-    enable_engine_calls = function() end --> enables all calls to engine functions
+    overrideblend = function() end --> allows for full scene re-rendering with depth when rendering to the safe render target
 }
 
 { --> lje.media
@@ -169,4 +143,4 @@ A utility library made for [LJ-Expand](https://github.com/lj-expand/lj-expand/) 
 }
 ```
 
-To use ljeutil, add it as a dependency in your info.toml script.
+To use lje-util, add it as a dependency in your info.toml script.

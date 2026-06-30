@@ -1,47 +1,46 @@
 --> [util.lua] <--
 --> Adds / optimises various useful functions <--
 
+local _R = lje.util.get_registry()
+
 --- @type Entity
-ENTITY = cloned_mts.Entity
+ENTITY = _R.Entity
 
 --- @type Player
-PLAYER = cloned_mts.Player
+PLAYER = _R.Player
 
 --- @type Vector
-VECTOR = cloned_mts.Vector
+VECTOR = _R.Vector
 
 --- @type Angle
-ANGLE = cloned_mts.Angle
+ANGLE = _R.Angle
 
 --- @type CUserCmd
-CUSERCMD = cloned_mts.CUserCmd
+CUSERCMD = _R.CUserCmd
 
 --- @type File
-FILE = cloned_mts.File
+FILE = _R.File
 
 --- @type ConVar
-CONVAR = cloned_mts.ConVar
+CONVAR = _R.ConVar
 
 --- @type VMatrix
-VMATRIX = cloned_mts.VMatrix
+VMATRIX = _R.VMatrix
 
 --- @type Weapon
-WEAPON = cloned_mts.Weapon
+WEAPON = _R.Weapon
 
 --- @class Vector
 --- @field __sub fun(self: Vector, other: Vector)
 
-local ENTITY = cloned_mts.Entity
+local ENTITY = _R.Entity
 local player_GetAll = player.GetAll
 local player_GetCount = player.GetCount
 local LocalPlayer = LocalPlayer
 local math_random = math.random
 local table_concat = table.concat
 local tonumber = tonumber
-local rawequal = rawequal
 local ENTITY_DrawModel = ENTITY.DrawModel
-local disable_engine_calls = lje.util.disable_engine_calls
-local enable_engine_calls = lje.util.enable_engine_calls
 local create_table = lje.util.create_table
 local ENTITY_GetClass = ENTITY.GetClass
 local ents_GetCount = ents.GetCount
@@ -75,7 +74,7 @@ local function searchandremove(tbl, value, count)
 
     local i = 1
     ::remove::
-    if (rawequal(tbl[i], value)) then
+    if (tbl[i] == value) then
         table_remove(tbl, i)
         return count - 1
     elseif (i ~= count) then
@@ -198,16 +197,6 @@ function lje.util.color_strict(r, g, b, a)
     }
 end
 
---> Safely draws the given entity's model
---- @param entity Entity
---- @param flags? number
---- @return nil
-function lje.util.safe_draw_model(entity, flags)
-    disable_engine_calls()
-    ENTITY_DrawModel(entity, flags)
-    enable_engine_calls()
-end
-
 --> Returns whether or not the given entity is a player - this should be used instead of entity:IsPlayer()
 --- @param entity Entity
 --- @return boolean
@@ -283,6 +272,7 @@ end
 function ents.GetCount(includekillme)
     if (includekillme == false) then
         return ents_GetCount(false) --> I couldn't find an easy way to make this fast so I swapped the logic of the function, as I don't think includekillme has any effect on people normally
+                                    --> @EDIT: (24/05/2026): I can check the flag EFL_KILLME with Entity:IsEFlagSet(), but this would be very slow - probably slower than the normal function - so I won't add that
     else
         return entitycount
     end
@@ -309,20 +299,20 @@ end
 
 local util_is_player = lje.util.is_player
 local debug_getmetatable = debug.getmetatable
-local npc_metatable = FindMetaTable("NPC")
-hook.pre("OnEntityCreated", "__ljeutil_entities", function(entity)
+local npc_metatable = _R.NPC
+hook.pre("OnEntityCreated", "__lje_util_entities", function(entity)
     if (util_is_player(entity)) then
         playercount = playercount + 1
         players[playercount] = entity
 
-        if (not rawequal(entity, localplayer)) then
+        if (entity ~= localplayer) then
             otherplayercount = otherplayercount + 1
             otherplayers[otherplayercount] = entity
         end
 
-        hook.callpre("ljeutil/playerconnect", entity)
-        hook.callpost("ljeutil/playerconnect", entity)
-    elseif (rawequal(debug_getmetatable(entity), npc_metatable)) then
+        hook.callpre("lje-util/playerconnect", entity)
+        hook.callpost("lje-util/playerconnect", entity)
+    elseif (debug_getmetatable(entity) == npc_metatable) then
         npcdict[entity] = true
         npccount = npccount + 1
         npcs[npccount] = entity
@@ -332,14 +322,39 @@ hook.pre("OnEntityCreated", "__ljeutil_entities", function(entity)
     entities[entitycount] = entity
 end)
 
-hook.pre("EntityRemoved", "__ljeutil_entities", function(entity, fullupdate)
+function PLAYER.__eq(a, b)
+    if (type(b) == "userdata") then
+        local bentindex = b.EntIndex
+        if (not bentindex) then
+            return false
+        end
+        return a:EntIndex() == bentindex(b)
+    else
+        return false
+    end
+end
+
+hook.pre("EntityRemoved", "__lje_util_entities", function(entity, fullupdate)
     if (util_is_player(entity)) then
         if (not fullupdate--[[ and not rawequal(entity, localplayer)]]) then
-            playercount = searchandremove(players, entity, playercount)
-            otherplayercount = searchandremove(otherplayers, entity, otherplayercount) --> this could be faster as both arrays are almost identical
+            --[[
+            lje.con_print("---------------------------------------")
+            lje.con_print("Other players:")
+            for i, v in ipairs(otherplayers) do
+                lje.con_printf("[%s]: '%s' | Is equal to leaving player?: %s", i, v, v == entity)
+            end
+            lje.con_printf("Leaving player: %s", entity)
+            lje.con_printf("Addresses: %p %p", otherplayers[1], entity)
+            lje.con_printf("Equal to self?: %s", entity:__eq(entity))
+            lje.con_printf("Player __index: %s | Is equal to _R.Entity?: %s", entity.__index, entity.__index == _R.Entity)
+            lje.con_print("---------------------------------------")
+            ]]
 
-            hook.callpre("ljeutil/playerdisconnect", entity)
-            hook.callpost("ljeutil/playerdisconnect", entity)
+            playercount = searchandremove(players, entity, playercount)
+            otherplayercount = searchandremove(otherplayers, entity, otherplayercount) --> This could be faster as both arrays are almost identical
+
+            hook.callpre("lje-util/playerdisconnect", entity)
+            hook.callpost("lje-util/playerdisconnect", entity)
         end
     elseif (npcdict[entity]) then
         npcdict[entity] = nil
@@ -364,12 +379,12 @@ function ScrH()
     return screenheight
 end
 
-hook.pre("OnScreenSizeChanged", "__ljeutil_screensize", function(oldwidth, oldheight, newwidth, newheight)
+hook.pre("OnScreenSizeChanged", "__lje_util_screensize", function(oldwidth, oldheight, newwidth, newheight)
     screenwidth = newwidth
     screenheight = newheight
 end)
 
-hook.pre("InitPostEntity", "__ljeutil_localplayer", function()
+hook.pre("InitPostEntity", "__lje_util_localplayer", function()
     localplayer = LocalPlayer()
     function LocalPlayer()
         return localplayer
@@ -382,7 +397,7 @@ hook.pre("InitPostEntity", "__ljeutil_localplayer", function()
     otherplayers = player_GetAll()
     
     otherplayercount = searchandremove(otherplayers, localplayer, otherplayercount)
-    hook.removepre("InitPostEntity", "__ljeutil_localplayer")
+    hook.removepre("InitPostEntity", "__lje_util_localplayer")
 end)
 
 --> a for loop is used here because this is only executed once so the performance overhead is not a concern

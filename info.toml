@@ -1,8 +1,8 @@
-# ljeutil - a utility library which adds many different default gmod functions implemented in lua, all of which are optimised
+# lje-util - a utility library which adds many different default gmod functions implemented in lua, all of which are optimised
 
 [script]
-name = "ljeutil"
+name = "lje-util"
 version = "1.0.0"
 author = "Eyoko1"
-url = "https://github.com/Eyoko1/ljeutil/"
+url = "https://github.com/Eyoko1/lje-util/"
 dependencies = []

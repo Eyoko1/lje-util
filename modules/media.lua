@@ -43,7 +43,7 @@ end
 local success, material = lje.media.load("debug_image.jpg", function(virtualpath)
     return Material(virtualpath)
 end)
-hook.post("HUDPaint", "__ljeutil_test", function()
+hook.post("HUDPaint", "__lje_util_test", function()
     surface.SetMaterial(material)
     surface.SetDrawColor(255, 255, 255, 255)
     surface.DrawTexturedRect(300, 300, 300, 300)

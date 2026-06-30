@@ -27,7 +27,6 @@ local tabwidth = 50
 
 local white = lje.util.color_strict(255, 255, 255, 255)
 
-local environment = lje.env.get()
 local draw = {
     SimpleText = function(text, font, x, y, color, xalign, yalign) end,
     SimpleTextOutlined = function(text, font, x, y, color, xalign, yalign, outlinewidth, outlinecolor) end,
@@ -41,7 +40,7 @@ local draw = {
     TexturedQuad = function(texturedata) end, --> do not use this unless it is absolutely necessary
     WordBox = function(bordersize, x, y, text, font, boxcolor, textcolor, xalign, yalign) end
 }
-environment.draw = draw
+_G.draw = draw
 
 function draw.SimpleText(text, font, x, y, colour, xalign, yalign)
     text = tostring(text)

@@ -13,7 +13,7 @@
 - Hard to implement
 - Slow removal (Dictionary removal + table.remove on array + editing upvalue)
 
-=> Right now I have decided to use option 1 as I don't think ljeutil hooks are called frequently enough for it to matter too much
+=> Right now I have decided to use option 1 as I don't think lje-util hooks are called frequently enough for it to matter too much
 => If you really think I should change this, you can ask me and I will, but it is quite complex to make option 2
 ]]--
 
@@ -32,6 +32,8 @@
 }
 ]]--
 
+--> Node traversal is faster with goto loops
+
 local PRE_HOOK_NODE = 1
 local POST_HOOK_NODE = 2
 
@@ -40,50 +42,9 @@ local NODE_CALLBACK = 2
 local NODE_NEXT = 3
 
 local hooklist = {}
-local hookdisabled = false
-local hookdisablelje = false
-local hookignorelua = true
 
-hook = {
-    list = hooklist
-}
-lje.env.get().hook = hook
-
---------------------------------
-
---> Prevent GLua callbacks for hooks being executed - and additionally provides the ability to do the same for LJE callbacks
---- @param disableljehooks boolean? Default is true --> if true, LJE callbacks for hooks won't be called either
-function hook.disable(disableljehooks)
-    hookdisabled = true
-    if (disableljehooks == nil) then
-        hookdisablelje = true
-    else
-        hookdisablelje = disableljehooks
-    end
-end
-
---> Re-enables GLua and LJE callbacks for hooks
-function hook.enable()
-    hookdisabled = false
-end
-
---> Returns whether or not hooks are disabled - returns both hookdisabled, and hookdisablelje
---- @return boolean, boolean
-function hook.isdisabled()
-    return hookdisabled, hookdisablelje
-end
-
---------------------------------
-
---> Prevent LJE callbacks from being called if the hook was invoked by lua
-function hook.disallowlua()
-    hookignorelua = true
-end
-
---> Allow LJE callbacks to be called when a hook is invoked by lua
-function hook.allowlua()
-    hookignorelua = false
-end
+hook = hook or {}
+hook.list = hooklist
 
 --------------------------------
 
@@ -284,87 +245,72 @@ function hook.getreturns()
 end
 
 --> An internal function called in an engine call hook - do not manually call this
---- @param originalcall fun(event: string, gm: GM, ...): ...
+--- @param hooks table
 --- @param event string
---- @param gm GM
 --- @param ... any
 --- @return ...
-function hook.__calldetour(originalcall, event, gm, ...)
-    if (hookdisabled) then
-        if (hookdisablelje) then
-            return
-        end
+local function __calldetour(hooks, event, ...)
+    local node = hooks[1--[[PRE_HOOK_NODE]]]
+    ::execute_pre::
+    if (node) then
+        node[2--[[NODE_CALLBACK]]](...)
+        
+        node = node[3--[[NODE_NEXT]]]
+        goto execute_pre
+    end
 
-        if (hookignorelua and is_lua_involved(3)) then
-            return originalcall(event, gm, ...)
-        end
+    --> Currently not allowed by lj-expand
+    --- @TODO: Change this once engine hooks are refactored
+    --originalcall(event, gm, ...)
 
-        local hooks = hooklist[event]
-        if (not hooks) then
-            return originalcall(event, gm, ...)
-        end
+    node = hooks[2--[[POST_HOOK_NODE]]]
+    ::execute_post::
+    if (node) then
+        node[2--[[NODE_CALLBACK]]](...)
 
-        local node = hooks[1--[[PRE_HOOK_NODE]]]
-        ::execute_pre_disabled::
-        if (node) then
-            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
-            if (a ~= nil) then
-                return a, b, c, d, e, f
-            end
-            
-            node = node[3--[[NODE_NEXT]]]
-            goto execute_pre_disabled
-        end
-
-        a2, b2, c2, d2, e2, f2 = nil, nil, nil, nil, nil, nil
-
-        node = hooks[2--[[POST_HOOK_NODE]]]
-        ::execute_post_disabled::
-        if (node) then
-            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
-            if (a ~= nil) then
-                return a, b, c, d, e, f
-            end
-            
-            node = node[3--[[NODE_NEXT]]]
-            goto execute_post_disabled
-        end
-    else
-        if (hookignorelua and is_lua_involved(3)) then
-            return originalcall(event, gm, ...)
-        end
-
-        local hooks = hooklist[event]
-        if (not hooks) then
-            return originalcall(event, gm, ...)
-        end
-
-        local node = hooks[1--[[PRE_HOOK_NODE]]]
-        ::execute_pre::
-        if (node) then
-            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
-            if (a ~= nil) then
-                return a, b, c, d, e, f
-            end
-            
-            node = node[3--[[NODE_NEXT]]]
-            goto execute_pre
-        end
-
-        --[[local ]]a2, b2, c2, d2, e2, f2 = originalcall(event, gm, ...)
-
-        node = hooks[2--[[POST_HOOK_NODE]]]
-        ::execute_post::
-        if (node) then
-            local a, b, c, d, e, f = node[2--[[NODE_CALLBACK]]](...)
-            if (a ~= nil) then
-                return a, b, c, d, e, f
-            end
-
-            node = node[3--[[NODE_NEXT]]]
-            goto execute_post
-        end
-
-        return a2, b2, c2, d2, e2, f2
+        node = node[3--[[NODE_NEXT]]]
+        goto execute_post
     end
 end
+
+local type = type
+local lje_proxy_copy = lje.proxy.copy
+local unpack = unpack
+local callpath = lje.state.path(lje.state.client, "hook"):index("Call")
+local runpath = lje.state.path(lje.state.client, "hook"):index("Run")
+local copypath = callpath.copy
+lje.vm.set_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
+    if (not func) then
+        return
+    end
+
+    local args
+    local copycount
+    local hooks
+    if (func == copypath(callpath)) then -- hook.Call
+        hooks = hooklist[event]
+        if (not hooks) then
+            return
+        end
+        args = {...}
+        copycount = nargs - 2
+    elseif (func == copypath(runpath)) then -- hook.Run (an edge case where some events are called with hook.Run such as DrawOverlay)
+        hooks = hooklist[event]
+        if (not hooks) then
+            return
+        end
+        args = {gm, ...}
+        copycount = nargs - 1
+    else
+        return -- We aren't in hook.* so let's just exit
+    end
+
+    for i = 1, copycount do
+        local value = args[i]
+        if (type(value) == "userdata") then
+            args[i] = lje_proxy_copy(value)
+        end
+    end
+
+    __calldetour(hooks, event, unpack(args))
+end)

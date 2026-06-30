@@ -1,9 +1,11 @@
 --> [input.lua] <--
 --> Adds functions for safely changing viewangles with CUserCmd handles <--
 
-local CONVAR = cloned_mts.ConVar
-local CUSERCMD = cloned_mts.CUserCmd
-local ANGLE = cloned_mts.Angle
+local _R = lje.util.get_registry()
+
+local CONVAR = _R.ConVar
+local CUSERCMD = _R.CUserCmd
+local ANGLE = _R.Angle
 
 local math_ceil = math.ceil
 local rawequal = rawequal
@@ -35,7 +37,7 @@ local hasinputcontext = false
 lje.input = {}
 
 local function nonhalting(message)
-    lje.con_printf("$red{ljeutil error! : %s}")
+    lje.con_printf("$red{lje-util error! : %s}")
 end
 
 --> Sets the desired eye angles to the given angle
@@ -43,7 +45,7 @@ end
 --- @return nil
 function lje.input.setangle(angle)
     if (not hasinputcontext) then
-        nonhalting("lje.input.* functions can only be called in 'ljeutil/input' hooks!")
+        nonhalting("lje.input.* functions can only be called in 'lje-util/input' hooks!")
         return
     end
 
@@ -57,7 +59,7 @@ end
 --- @return Angle
 function lje.input.getangle()
     if (not hasinputcontext) then
-        nonhalting("lje.input.* functions can only be called in 'ljeutil/input' hooks!")
+        nonhalting("lje.input.* functions can only be called in 'lje-util/input' hooks!")
         return blankangle
     end
 
@@ -68,7 +70,7 @@ end
 --- @param delta Angle
 function lje.input.sendangle(delta)
     if (not hasinputcontext) then
-        nonhalting("lje.input.* functions can only be called in 'ljeutil/input' hooks!")
+        nonhalting("lje.input.* functions can only be called in 'lje-util/input' hooks!")
         return
     end
 
@@ -80,17 +82,11 @@ function lje.input.sendangle(delta)
     changedangle = true
 end
 
-hook.pre("ljeutil/convarchanged", "__ljeutil_input", function(name)
-    if (rawequal(name, "sensitivity")) then
-        sensitivity = CONVAR_GetFloat(cv_sensitivity)
-    elseif (rawequal(name, "m_yaw")) then
-        myaw = CONVAR_GetFloat(cv_myaw)
-    elseif (rawequal(name, "m_pitch")) then
-        mpitch = CONVAR_GetFloat(cv_mpitch)
-    end
-end)
+hook.pre("StartCommand", "__lje_util_input", function(_, cmd)
+    sensitivity = CONVAR_GetFloat(cv_sensitivity)
+    myaw = CONVAR_GetFloat(cv_myaw)
+    mpitch = CONVAR_GetFloat(cv_mpitch)
 
-hook.pre("StartCommand", "__ljeutil_input", function(_, cmd)
     local viewangles = CUSERCMD_GetViewAngles(cmd)
 
     local viewp = viewangles[1]
@@ -100,7 +96,7 @@ hook.pre("StartCommand", "__ljeutil_input", function(_, cmd)
     desiredangle[3] = viewangles[3]
 
     hasinputcontext = true
-    hook_callpre("ljeutil/input", cmd)
+    hook_callpre("lje-util/input", cmd)
     hasinputcontext = false
     
     if (changedangle) then
@@ -112,5 +108,5 @@ hook.pre("StartCommand", "__ljeutil_input", function(_, cmd)
         CUSERCMD_SetMouseY(cmd, y + math_ceil((desiredangle[1] - viewp) / (sensitivity * mpitch)))
     end
 
-    hook_callpost("ljeutil/input", cmd)
+    hook_callpost("lje-util/input", cmd)
 end)
