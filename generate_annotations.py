@@ -28,6 +28,15 @@ path = pathout + "\\lj-expand-expansion\\docs\\api"
 
 #path = input("Path to 'lj-expand/docs/api':\t")
 
+def getformatteddescription(description):
+    if (not (type(description) is list)):
+        description = description.split("\n")
+
+    descriptionoutput = []
+    for line in description:
+        descriptionoutput.append("--- " + line)
+    return "\n".join(descriptionoutput)
+
 def parse(data: dict[str, JSONInstance]):
     if (not ("namespace" in data)):
         return
@@ -44,21 +53,17 @@ def parse(data: dict[str, JSONInstance]):
     else:
         fprefix = "lje." + namespace + "."
         cprefix = fprefix
-        namespaces.append(f"--- {data['description']}\nlje.{namespace} = {{}}")
+        namespaces.append(f"{getformatteddescription(data['description'])}\nlje.{namespace} = {{}}")
     
     for const in constants:
         if (isbase and not const['name'].startswith("lje.")):
             continue # Don't add polyfills and stuff like that
 
-        description = const['description']
-        if type(description) is list:
-            description = "".join(description)
-        else:
-            description = description.replace("\n", " ")
+        descriptionstring = getformatteddescription(const['description'])
 
         line = []
 
-        line.append(f"--- {description}")
+        line.append(descriptionstring)
         line.append(f"--- @type {const['type']}")
         line.append(f"{cprefix}{const['name']} = nil")
         output.append("\n".join(line))
@@ -74,14 +79,7 @@ def parse(data: dict[str, JSONInstance]):
         if (len(returns) == 0):
             returns.append("nil")
 
-        description = function['description']
-        if (not (type(description) is list)):
-            description = description.split("\n")
-
-        descriptionoutput = []
-        for line in description:
-            descriptionoutput.append("--- " + line)
-        descriptionstring = "\n".join(descriptionoutput)
+        descriptionstring = getformatteddescription(function['description'])
 
         line = []
 
