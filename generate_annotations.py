@@ -79,7 +79,7 @@ def parse(data: dict[str, JSONInstance]):
             string: str = ret['type']
             if (string.find("...") != -1):
                 string = "..."
-            line.append(f"--- @return {string} R{i} {ret['description']}")
+            line.append(f"--- @return {string}{'?' if (('optional' in param) and (param['optional'])) else ''} R{i} {ret['description']}")
             i = i + 1
         
         line.append(f"function {fprefix}{function['name']}({', '.join(params)}) end --- @diagnostic disable-line")

@@ -244,41 +244,12 @@ function hook.getreturns()
     return a2, b2, c2, d2, e2, f2
 end
 
---> An internal function called in an engine call hook - do not manually call this
---- @param hooks table
---- @param event string
---- @param ... any
---- @return ...
-local function __calldetour(hooks, event, ...)
-    local node = hooks[1--[[PRE_HOOK_NODE]]]
-    ::execute_pre::
-    if (node) then
-        node[2--[[NODE_CALLBACK]]](...)
-        
-        node = node[3--[[NODE_NEXT]]]
-        goto execute_pre
-    end
-
-    --> Currently not allowed by lj-expand
-    --- @TODO: Change this once engine hooks are refactored
-    --originalcall(event, gm, ...)
-
-    node = hooks[2--[[POST_HOOK_NODE]]]
-    ::execute_post::
-    if (node) then
-        node[2--[[NODE_CALLBACK]]](...)
-
-        node = node[3--[[NODE_NEXT]]]
-        goto execute_post
-    end
-end
-
 local function __callnode(node, ...)
-    ::execute_pre::
+    ::call_node::
     node[2--[[NODE_CALLBACK]]](...)
     node = node[3--[[NODE_NEXT]]]
     if (node) then
-        goto execute_pre
+        goto call_node
     end
 end
 
@@ -324,16 +295,16 @@ lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
             args[i] = lje_proxy_copy(value)
         end
     end
-    
-    postnode = hooks[2--[[POST_HOOK_NODE]]]
-    if (postnode) then
-        inhookcall = true
-        activeargs = args
-    end
 
     local node = hooks[1--[[PRE_HOOK_NODE]]]
     if (node) then
         __callnode(node, unpack(args))
+    end
+
+    postnode = hooks[2--[[POST_HOOK_NODE]]]
+    if (postnode) then
+        inhookcall = true
+        activeargs = args
     end
 end)
 
