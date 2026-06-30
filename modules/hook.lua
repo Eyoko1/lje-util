@@ -273,12 +273,81 @@ local function __calldetour(hooks, event, ...)
     end
 end
 
+local function __callnode(node, ...)
+    ::execute_pre::
+    node[2--[[NODE_CALLBACK]]](...)
+    node = node[3--[[NODE_NEXT]]]
+    if (node) then
+        goto execute_pre
+    end
+end
+
 local type = type
 local lje_proxy_copy = lje.proxy.copy
 local unpack = unpack
 local callpath = lje.state.path(lje.state.client, "hook"):index("Call")
 local runpath = lje.state.path(lje.state.client, "hook"):index("Run")
 local copypath = callpath.copy
+
+local inhookcall = false
+local activeargs = {}
+local postnode = nil
+lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
+    if (not func) then
+        return
+    end
+
+    local args
+    local copycount
+    local hooks
+    if (func == copypath(callpath)) then -- hook.Call
+        hooks = hooklist[event]
+        if (not hooks) then
+            return
+        end
+        args = {...}
+        copycount = nargs - 2
+    elseif (func == copypath(runpath)) then -- hook.Run (an edge case where some events are called with hook.Run such as DrawOverlay)
+        hooks = hooklist[event]
+        if (not hooks) then
+            return
+        end
+        args = {gm, ...}
+        copycount = nargs - 1
+    else
+        return -- We aren't in hook.* so let's just exit
+    end
+
+    for i = 1, copycount do
+        local value = args[i]
+        if (type(value) == "userdata") then
+            args[i] = lje_proxy_copy(value)
+        end
+    end
+    
+    postnode = hooks[2--[[POST_HOOK_NODE]]]
+    if (postnode) then
+        inhookcall = true
+        activeargs = args
+    end
+
+    local node = hooks[1--[[PRE_HOOK_NODE]]]
+    if (node) then
+        __callnode(node, unpack(args))
+    end
+end)
+
+lje.vm.add_post_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
+    if (not inhookcall) then
+        return
+    end
+
+    inhookcall = false
+    __callnode(postnode, unpack(activeargs))
+    activeargs = nil
+end)
+
+--[[
 lje.vm.set_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
     if (not func) then
         return
@@ -314,3 +383,4 @@ lje.vm.set_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
 
     __calldetour(hooks, event, unpack(args))
 end)
+]]
