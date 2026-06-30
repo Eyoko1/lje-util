@@ -59,42 +59,29 @@ def parse(data: dict[str, JSONInstance]):
         if (isbase and not const['name'].startswith("lje.")):
             continue # Don't add polyfills and stuff like that
 
-        descriptionstring = getformatteddescription(const['description'])
-
         line = []
-
-        line.append(descriptionstring)
+        line.append(getformatteddescription(const['description']))
         line.append(f"--- @type {const['type']}")
         line.append(f"{cprefix}{const['name']} = nil")
         output.append("\n".join(line))
     
     for function in functions:
-        returns = []
-        for ret in function['returns']:
-            string: str = ret['type']
-            if (string.find("...") != -1):
-                string = "..."
-            returns.append(string)
-
-        if (len(returns) == 0):
-            returns.append("nil")
-
-        descriptionstring = getformatteddescription(function['description'])
-
         line = []
-
-        #line.append(f"--- {descriptionstring}")
-        #line.append(f"--- @type fun({', '.join(params)}): {', '.join(returns)}")
-        #line.append(f"{fprefix}{function['name']} = nil")
-
-        line.append(descriptionstring)
+        line.append(getformatteddescription(function['description']))
 
         params = []
         for param in function["params"]:
             line.append(f"--- @param {param['name']} {param['type']} {param['description']}")
             params.append(param['name'])
         
-        line.append("--- @return " + ", ".join(returns))
+        i = 1
+        for ret in function['returns']:
+            string: str = ret['type']
+            if (string.find("...") != -1):
+                string = "..."
+            line.append(f"--- @return {string} R{i} {ret['description']}")
+            i = i + 1
+        
         line.append(f"function {fprefix}{function['name']}({', '.join(params)}) end --- @diagnostic disable-line")
         output.append("\n".join(line))
 
