@@ -7,13 +7,26 @@
 import os
 import json
 import typing
+import urllib.request
+import zipfile
+import shutil
 
 JSONInstance = typing.Union[dict[str, "JSONInstance"], list["JSONInstance"], str, int, float, bool]
 
 namespaces = []
 output = []
 
-path = input("Path to 'lj-expand/docs/api':\t")
+pathout = "lje-git-repo-lje-util"
+pathin = pathout + "-zip"
+urllib.request.urlretrieve("https://github.com/lj-expand/lj-expand/archive/refs/heads/expansion.zip", pathin)
+with zipfile.ZipFile(pathin, "r") as zip:
+    zip.extractall(pathout)
+
+os.remove(pathin)
+
+path = pathout + "\\lj-expand-expansion\\docs\\api"
+
+#path = input("Path to 'lj-expand/docs/api':\t")
 
 def parse(data: dict[str, JSONInstance]):
     if (not ("namespace" in data)):
@@ -31,7 +44,7 @@ def parse(data: dict[str, JSONInstance]):
     else:
         fprefix = "lje." + namespace + "."
         cprefix = fprefix
-        namespaces.append(f"--> {data['description']}\nlje.{namespace} = {{}}")
+        namespaces.append(f"--- {data['description']}\nlje.{namespace} = {{}}")
     
     for const in constants:
         if (isbase and not const['name'].startswith("lje.")):
@@ -45,7 +58,7 @@ def parse(data: dict[str, JSONInstance]):
 
         line = []
 
-        line.append(f"--> {description}")
+        line.append(f"--- {description}")
         line.append(f"--- @type {const['type']}")
         line.append(f"{cprefix}{const['name']} = nil")
         output.append("\n".join(line))
@@ -62,18 +75,21 @@ def parse(data: dict[str, JSONInstance]):
             returns.append("nil")
 
         description = function['description']
-        if type(description) is list:
-            description = "".join(description)
-        else:
-            description = description.replace("\n", " ")
+        if (not (type(description) is list)):
+            description = description.split("\n")
+
+        descriptionoutput = []
+        for line in description:
+            descriptionoutput.append("--- " + line)
+        descriptionstring = "\n".join(descriptionoutput)
 
         line = []
 
-        #line.append(f"--> {description}")
+        #line.append(f"--- {descriptionstring}")
         #line.append(f"--- @type fun({', '.join(params)}): {', '.join(returns)}")
         #line.append(f"{fprefix}{function['name']} = nil")
 
-        line.append(f"--> {description}")
+        line.append(descriptionstring)
 
         params = []
         for param in function["params"]:
@@ -91,7 +107,7 @@ for file in os.listdir(directory):
         parse(json.load(f))
 
 outstring = (
-            "--> LJ-Expand's environment table containing all functions and data related to it \n"
+            "--- LJ-Expand's environment table containing all functions and data related to it \n"
             + "lje = {}\n\n"
             + "\n\n".join(namespaces)
             + "\n\n"
@@ -99,3 +115,5 @@ outstring = (
             )
 with open("\\".join(__file__.split("\\")[:-1]) + "\\modules\\annotations.lua", "w") as f:
     f.write(outstring)
+
+shutil.rmtree(pathout)
