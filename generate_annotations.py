@@ -71,7 +71,7 @@ def parse(data: dict[str, JSONInstance]):
 
         params = []
         for param in function["params"]:
-            line.append(f"--- @param {param['name']} {param['type']} {param['description']}")
+            line.append(f"--- @param {param['name']} {param['type']}{'?' if (('optional' in param) and (param['optional'])) else ''} {param['description']}")
             params.append(param['name'])
         
         i = 1

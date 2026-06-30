@@ -322,34 +322,9 @@ hook.pre("OnEntityCreated", "__lje_util_entities", function(entity)
     entities[entitycount] = entity
 end)
 
-function PLAYER.__eq(a, b)
-    if (type(b) == "userdata") then
-        local bentindex = b.EntIndex
-        if (not bentindex) then
-            return false
-        end
-        return a:EntIndex() == bentindex(b)
-    else
-        return false
-    end
-end
-
 hook.pre("EntityRemoved", "__lje_util_entities", function(entity, fullupdate)
     if (util_is_player(entity)) then
         if (not fullupdate--[[ and not rawequal(entity, localplayer)]]) then
-            --[[
-            lje.con_print("---------------------------------------")
-            lje.con_print("Other players:")
-            for i, v in ipairs(otherplayers) do
-                lje.con_printf("[%s]: '%s' | Is equal to leaving player?: %s", i, v, v == entity)
-            end
-            lje.con_printf("Leaving player: %s", entity)
-            lje.con_printf("Addresses: %p %p", otherplayers[1], entity)
-            lje.con_printf("Equal to self?: %s", entity:__eq(entity))
-            lje.con_printf("Player __index: %s | Is equal to _R.Entity?: %s", entity.__index, entity.__index == _R.Entity)
-            lje.con_print("---------------------------------------")
-            ]]
-
             playercount = searchandremove(players, entity, playercount)
             otherplayercount = searchandremove(otherplayers, entity, otherplayercount) --> This could be faster as both arrays are almost identical
 
@@ -400,7 +375,6 @@ hook.pre("InitPostEntity", "__lje_util_localplayer", function()
     hook.removepre("InitPostEntity", "__lje_util_localplayer")
 end)
 
---> a for loop is used here because this is only executed once so the performance overhead is not a concern
 for _, entity in ipairs(ents.GetAll()) do
     if (lje.util.is_npc(entity)) then
         npccount = npccount + 1

@@ -42,7 +42,7 @@ lje.vm = {}
 
 --- Loads a script file relative to the current script's directory. Optionally controls whether the script is executed immediately after loading. Defaults to executing if the second argument is omitted. Requires an active script context. Load and runtime errors are printed to the console rather than raised, in which case nothing is returned.
 --- @param path string Path to the script file, relative to the current script.
---- @param execute boolean Whether to execute the script after loading. Defaults to `true`.
+--- @param execute boolean? Whether to execute the script after loading. Defaults to `true`.
 --- @return ... R1 If `execute` is `false`, the loaded function. Otherwise, everything the executed script returned. Nothing is returned on failure.
 function lje.include(path, execute) end --- @diagnostic disable-line
 
@@ -128,7 +128,7 @@ function lje.require(path) end --- @diagnostic disable-line
 --- lje.con_printf("$red{Error}: %s", message)
 --- ```
 --- @param fmt string A `string.format` format string. Color codes use the syntax `$colorName{text}`.
---- @param ... any Format arguments, passed to `string.format`.
+--- @param ... any? Format arguments, passed to `string.format`.
 function lje.con_printf(fmt, ...) end --- @diagnostic disable-line
 
 --- Returns the type of the host object a proxy refers to.
@@ -164,7 +164,7 @@ function lje.secure.isolate(force) end --- @diagnostic disable-line
 --- 
 --- The key is traversed through nested tables, so `get("render.color")` returns `settings.render.color`. If any segment along the path is missing (or is not a table), `default` is returned when provided, otherwise `nil`.
 --- @param key string A setting key. Use dots to traverse nested tables, e.g. `"section.option"`.
---- @param default any Returned when the key is not present after merging.
+--- @param default any? Returned when the key is not present after merging.
 --- @return any R1 The setting value, or `default` (or `nil`) if absent.
 function lje.settings.get(key, default) end --- @diagnostic disable-line
 
@@ -243,8 +243,8 @@ function lje.util.get_registry() end --- @diagnostic disable-line
 function lje.util.set_script_hook_callback(fn) end --- @diagnostic disable-line
 
 --- Creates a new table with pre-allocated space. Equivalent to `lua_createtable`. Useful for avoiding rehashing overhead when the approximate size of the table is known in advance.
---- @param narr integer Expected number of array-part entries. Defaults to `0`.
---- @param nrec integer Expected number of hash-part entries. Defaults to `0`.
+--- @param narr integer? Expected number of array-part entries. Defaults to `0`.
+--- @param nrec integer? Expected number of hash-part entries. Defaults to `0`.
 --- @return table R1 A new empty table with the requested pre-allocated capacity.
 function lje.util.create_table(narr, nrec) end --- @diagnostic disable-line
 
@@ -252,21 +252,32 @@ function lje.util.create_table(narr, nrec) end --- @diagnostic disable-line
 --- @param value any The value to print.
 function lje.util.inspect(value) end --- @diagnostic disable-line
 
---- Registers a per-script engine call hook. Whenever the engine invokes a Lua function in the host (game) state, the callback is invoked in the secure state as `fn(func, nargs, nresults, ...)`:
+--- Registers an engine call hook for the current script. Whenever the engine invokes a Lua function in the host (game) state, every registered hook is invoked in the secure state as `fn(func, nargs, nresults, ...)`:
 --- 
---- - `func` — a light userdata pointer identifying the called function. Useful for identity comparisons without copying a full function object across states.
+--- - `func` — a number holding the called function's pointer (its address cast to a `lua_Number`). Useful for identity comparisons without copying a full function object across states.
 --- - `nargs` / `nresults` — the argument and result counts of the engine call.
 --- - `...` — the call arguments. Tables and userdata arrive as proxy handles (see `lje.proxy`); other values are copied into the secure state.
 --- 
---- The hook's return values are ignored — handling/suppressing engine calls is not currently supported. Errors thrown by the hook are caught and printed to the console. Requires an active script context, and hooks only fire for secure scripts. Only one hook can be active per script at a time.
+--- The `is_post` flag controls when the hook runs relative to the engine call itself:
+--- 
+--- - `false` (default) — the hook is a *pre* hook and runs *before* the engine call proceeds.
+--- - `true` — the hook is a *post* hook: LJE performs the engine call first, then invokes the hook afterwards against a snapshot of the original arguments, so it observes a call that has already happened.
+--- 
+--- Hooks fire in script load order; within a script they fire in registration order. All pre hooks across every script run before the real call, then all post hooks run after it. A script may register up to 16 hooks, and may freely mix pre and post hooks.
+--- 
+--- The hook's return values are ignored — handling/suppressing engine calls is not currently supported. Errors thrown by a hook are caught and printed to the console; the remaining hooks still run. Requires an active script context, and hooks only fire for secure scripts.
 --- @param fn function Must be a Lua function, not a C function.
-function lje.vm.set_engine_call_hook(fn) end --- @diagnostic disable-line
+--- @param is_post boolean? `true` to run the hook after the engine call, `false` (default) to run it before.
+function lje.vm.add_engine_call_hook(fn, is_post) end --- @diagnostic disable-line
 
---- Controls when this script's engine call hook runs relative to the engine call itself.
---- 
---- - `false` (default) — the hook runs *before* the engine call proceeds normally.
---- - `true` — LJE performs the engine call first, then invokes the hook afterwards, so the hook observes a call that has already happened. Since the call is consumed in the process, any remaining scripts' hooks are skipped for that call, and if the hook itself errors, the call's status is returned to the engine as-is.
---- 
---- Requires an active script context.
---- @param post boolean `true` to run the hook after the engine call, `false` to run it before.
-function lje.vm.set_engine_call_hook_post(post) end --- @diagnostic disable-line
+--- Convenience wrapper around `lje.vm.add_engine_call_hook(hook, false)` that registers `hook` as a pre hook (runs before the engine call). See `add_engine_call_hook` for the hook signature and semantics.
+--- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.
+function lje.vm.add_pre_engine_call_hook(hook) end --- @diagnostic disable-line
+
+--- Convenience wrapper around `lje.vm.add_engine_call_hook(hook, true)` that registers `hook` as a post hook (runs after the engine call, against a snapshot of the original arguments). See `add_engine_call_hook` for the hook signature and semantics.
+--- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.
+function lje.vm.add_post_engine_call_hook(hook) end --- @diagnostic disable-line
+
+--- Legacy helper kept for backwards compatibility; equivalent to `lje.vm.add_pre_engine_call_hook(hook)`. Despite the `set_` name it *adds* a hook rather than replacing existing ones. Prefer `add_pre_engine_call_hook` or `add_post_engine_call_hook` in new code.
+--- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.
+function lje.vm.set_engine_call_hook(hook) end --- @diagnostic disable-line
