@@ -43,9 +43,12 @@ def parse(data: dict[str, JSONInstance]):
         else:
             description = description.replace("\n", " ")
 
-        output.append(f"--> {description}")
-        output.append(f"--- @type {const['type']}")
-        output.append(f"{cprefix}{const['name']} = nil")
+        line = []
+
+        line.append(f"--> {description}")
+        line.append(f"--- @type {const['type']}")
+        line.append(f"{cprefix}{const['name']} = nil")
+        output.append("\n".join(line))
     
     for function in functions:
         returns = []
@@ -64,19 +67,22 @@ def parse(data: dict[str, JSONInstance]):
         else:
             description = description.replace("\n", " ")
 
-        #output.append(f"--> {description}")
-        #output.append(f"--- @type fun({', '.join(params)}): {', '.join(returns)}")
-        #output.append(f"{fprefix}{function['name']} = nil")
+        line = []
 
-        output.append(f"--> {description}")
+        #line.append(f"--> {description}")
+        #line.append(f"--- @type fun({', '.join(params)}): {', '.join(returns)}")
+        #line.append(f"{fprefix}{function['name']} = nil")
+
+        line.append(f"--> {description}")
 
         params = []
         for param in function["params"]:
-            output.append(f"--- @param {param['name']} {param['type']} {param['description']}")
+            line.append(f"--- @param {param['name']} {param['type']} {param['description']}")
             params.append(param['name'])
         
-        output.append("--- @return " + ", ".join(returns))
-        output.append(f"function {fprefix}{function['name']}({', '.join(params)}) end --- @diagnostic disable-line")
+        line.append("--- @return " + ", ".join(returns))
+        line.append(f"function {fprefix}{function['name']}({', '.join(params)}) end --- @diagnostic disable-line")
+        output.append("\n".join(line))
 
 directory = os.fsencode(path)
 for file in os.listdir(directory):
@@ -86,9 +92,10 @@ for file in os.listdir(directory):
 
 outstring = (
             "--> LJ-Expand's environment table containing all functions and data related to it \n"
-            + "lje = {}\n"
-            + "\n".join(namespaces)
-            + "\n".join(output)
+            + "lje = {}\n\n"
+            + "\n\n".join(namespaces)
+            + "\n\n"
+            + "\n\n".join(output)
             )
 with open("\\".join(__file__.split("\\")[:-1]) + "\\modules\\annotations.lua", "w") as f:
     f.write(outstring)
