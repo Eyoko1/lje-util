@@ -332,10 +332,11 @@ function lje.util.world_to_screen(inx, iny, inz)
         local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
         local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
         local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
-        return outx, outy, rawx >= -w and rawx <= w and rawy >= -w and rawy <= w
+        local frustum = w * 1.25
+        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
     end
 
-    return 0, 0, false
+    return -1, -1, false
 end
 
 --> Does the same as lje.util.world_to_screen but takes in a vector instead of three numbers
@@ -354,10 +355,11 @@ function lje.util.world_to_screen_vector(vector)
         local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
         local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
         local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
-        return outx, outy, rawx >= -w and rawx <= w and rawy >= -w and rawy <= w
+        local frustum = w * 2
+        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
     end
 
-    return 0, 0, false
+    return -1, -1, false
 end
 
 local util_is_player = lje.util.is_player
