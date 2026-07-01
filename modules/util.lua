@@ -321,35 +321,43 @@ end
 --- @param inx number
 --- @param iny number
 --- @param inz number
---- @return number, number, boolean
+--- @return number x
+--- @return number y
+--- @return boolean visible
 function lje.util.world_to_screen(inx, iny, inz)
     local w = inx * m12 + iny * m13 + inz * m14 + m15
-    if (w > 0.01) then
+    if (w > 0.001) then
         local i = 1 / w
-        local outx = (((inx * m0 + iny * m1 + inz * m2 + m3) * i) * 0.5 + 0.5) * screenwidth
-        local outy = (1 - (((inx * m4 + iny * m5 + inz * m6 + m7) * i) * 0.5 + 0.5)) * screenheight
-        return outx, outy, true
+        local rawx = (inx * m0 + iny * m1 + inz * m2 + m3)
+        local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
+        local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
+        local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
+        return outx, outy, rawx >= -w and rawx <= w and rawy >= -w and rawy <= w
     end
 
-    return 0, 0, true
+    return 0, 0, false
 end
 
 --> Does the same as lje.util.world_to_screen but takes in a vector instead of three numbers
 -->
 --> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
 --- @param vector Vector
---- @return number, number, boolean
+--- @return number x
+--- @return number y
+--- @return boolean visible
 function lje.util.world_to_screen_vector(vector)
     local inx, iny, inz = vector[1], vector[2], vector[3]
     local w = inx * m12 + iny * m13 + inz * m14 + m15
-    if (w > 0.01) then
+    if (w > 0.001) then
         local i = 1 / w
-        local outx = (((inx * m0 + iny * m1 + inz * m2 + m3) * i) * 0.5 + 0.5) * screenwidth
-        local outy = (1 - (((inx * m4 + iny * m5 + inz * m6 + m7) * i) * 0.5 + 0.5)) * screenheight
-        return outx, outy, true
+        local rawx = (inx * m0 + iny * m1 + inz * m2 + m3)
+        local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
+        local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
+        local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
+        return outx, outy, rawx >= -w and rawx <= w and rawy >= -w and rawy <= w
     end
 
-    return 0, 0, true
+    return 0, 0, false
 end
 
 local util_is_player = lje.util.is_player
