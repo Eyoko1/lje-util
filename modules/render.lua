@@ -38,10 +38,22 @@ local cam3dtable = {
 }
 
 local cam_Start = cam.Start
+
+--- @return nil
 function cam.Start2D()
     cam_Start(cam2dtable)
 end
 
+--- @param pos Vector?
+--- @param ang Angle?
+--- @param fov number?
+--- @param x number?
+--- @param y number?
+--- @param w number?
+--- @param h number?
+--- @param znear number?
+--- @param zfar number?
+--- @return nil
 function cam.Start3D(pos, ang, fov, x, y, w, h, znear, zfar)
 	cam3dtable.origin = pos
 	cam3dtable.angles = ang
@@ -72,7 +84,8 @@ end
 local overrideblend = false
 
 --> Overrides the blend for the next frame - Used to correctly render depth to the screen, for example when drawing with render.RenderView
-function lje.util.overrideblend()
+--- @return nil
+function lje.util.override_blend()
     overrideblend = true
 end
 
@@ -94,8 +107,8 @@ hook.post("PostRender", "__safert", function()
 
     cam_Start2D()
         render_PushRenderTarget(safert)
-            hook_callpre("ljeutil/render")
-            hook_callpre("ljeutil/postrender")
+            hook_callpre("lje-util/render")
+            hook_callpre("lje-util/postrender")
 
             render_PushRenderTarget(nil) --> Push main frame buffer
                 if (overrideblend) then
@@ -112,8 +125,8 @@ hook.post("PostRender", "__safert", function()
                 end
             render_PopRenderTarget()
 
-            hook_callpost("ljeutil/render")
-            hook_callpost("ljeutil/postrender")
+            hook_callpost("lje-util/render")
+            hook_callpost("lje-util/postrender")
 
             render_Clear(0, 0, 0, 0, true, true)
         render_PopRenderTarget()

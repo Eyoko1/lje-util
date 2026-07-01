@@ -26,6 +26,11 @@ local file_Write = file.Write
 local file_Delete = file.Delete
 local util_SHA256 = util.SHA256
 local util_random_string = lje.util.random_string
+
+--- @param path string
+--- @param callback fun(virtualpath: string): any
+--- @return boolean success Whether or not we could successfuly load media from the given path
+--- @return any value The value returned by the callback
 function lje.media.load(path, callback)
     local data = PLACEHOLDER_READ_DIRECTORY(path)
     local virtualpath = util_SHA256(util_random_string())..getextension(path)
@@ -43,7 +48,7 @@ end
 local success, material = lje.media.load("debug_image.jpg", function(virtualpath)
     return Material(virtualpath)
 end)
-hook.post("HUDPaint", "__ljeutil_test", function()
+hook.post("HUDPaint", "__lje_util_test", function()
     surface.SetMaterial(material)
     surface.SetDrawColor(255, 255, 255, 255)
     surface.DrawTexturedRect(300, 300, 300, 300)

@@ -1,47 +1,46 @@
 --> [util.lua] <--
 --> Adds / optimises various useful functions <--
 
+local _R = lje.util.get_registry()
+
 --- @type Entity
-ENTITY = cloned_mts.Entity
+ENTITY = _R.Entity
 
 --- @type Player
-PLAYER = cloned_mts.Player
+PLAYER = _R.Player
 
 --- @type Vector
-VECTOR = cloned_mts.Vector
+VECTOR = _R.Vector
 
 --- @type Angle
-ANGLE = cloned_mts.Angle
+ANGLE = _R.Angle
 
 --- @type CUserCmd
-CUSERCMD = cloned_mts.CUserCmd
+CUSERCMD = _R.CUserCmd
 
 --- @type File
-FILE = cloned_mts.File
+FILE = _R.File
 
 --- @type ConVar
-CONVAR = cloned_mts.ConVar
+CONVAR = _R.ConVar
 
 --- @type VMatrix
-VMATRIX = cloned_mts.VMatrix
+VMATRIX = _R.VMatrix
 
 --- @type Weapon
-WEAPON = cloned_mts.Weapon
+WEAPON = _R.Weapon
 
 --- @class Vector
 --- @field __sub fun(self: Vector, other: Vector)
 
-local ENTITY = cloned_mts.Entity
+local ENTITY = _R.Entity
 local player_GetAll = player.GetAll
 local player_GetCount = player.GetCount
 local LocalPlayer = LocalPlayer
 local math_random = math.random
 local table_concat = table.concat
 local tonumber = tonumber
-local rawequal = rawequal
 local ENTITY_DrawModel = ENTITY.DrawModel
-local disable_engine_calls = lje.util.disable_engine_calls
-local enable_engine_calls = lje.util.enable_engine_calls
 local create_table = lje.util.create_table
 local ENTITY_GetClass = ENTITY.GetClass
 local ents_GetCount = ents.GetCount
@@ -67,6 +66,9 @@ local npccount = 0
 local npcs = {}
 local npcdict = setmetatable({}, {__mode = "k"})
 
+local screenwidth = ScrW()
+local screenheight = ScrH()
+
 local table_remove = table.remove
 local function searchandremove(tbl, value, count)
     if (count <= 0) then
@@ -75,7 +77,7 @@ local function searchandremove(tbl, value, count)
 
     local i = 1
     ::remove::
-    if (rawequal(tbl[i], value)) then
+    if (tbl[i] == value) then
         table_remove(tbl, i)
         return count - 1
     elseif (i ~= count) then
@@ -198,16 +200,6 @@ function lje.util.color_strict(r, g, b, a)
     }
 end
 
---> Safely draws the given entity's model
---- @param entity Entity
---- @param flags? number
---- @return nil
-function lje.util.safe_draw_model(entity, flags)
-    disable_engine_calls()
-    ENTITY_DrawModel(entity, flags)
-    enable_engine_calls()
-end
-
 --> Returns whether or not the given entity is a player - this should be used instead of entity:IsPlayer()
 --- @param entity Entity
 --- @return boolean
@@ -280,9 +272,11 @@ end
 
 --> Returns the number of entities on the server - Unlike the normal function, includekillme is true by default
 --- @param includekillme boolean? Default is true
+--- @return integer
 function ents.GetCount(includekillme)
     if (includekillme == false) then
         return ents_GetCount(false) --> I couldn't find an easy way to make this fast so I swapped the logic of the function, as I don't think includekillme has any effect on people normally
+                                    --> @EDIT: (24/05/2026): I can check the flag EFL_KILLME with Entity:IsEFlagSet(), but this would be very slow - probably slower than the normal function - so I won't add that
     else
         return entitycount
     end
@@ -307,22 +301,85 @@ function lje.util.get_mutable_entities()
     return mutable
 end
 
+local cam_GetViewMatrix = cam.GetViewMatrix
+local cam_GetProjectionMatrix = cam.GetProjectionMatrix
+local VMATRIX_Mul = VMATRIX.Mul
+local VMATRIX_Unpack = VMATRIX.Unpack
+
+local flmatrix = Matrix()
+local m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = VMATRIX_Unpack(flmatrix)
+
+--> Sets up the data required for world-to-screen operations
+--- @return nil
+function lje.util.setup_viewmatrix()
+    flmatrix = cam_GetProjectionMatrix()
+    VMATRIX_Mul(flmatrix, cam_GetViewMatrix())
+    m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = VMATRIX_Unpack(flmatrix)
+end
+
+--> Performs a world-to-screen calculation using the given coordinates. This is cheaper than using Vector:ToScreen() as it does not create a ToScreenData struct
+-->
+--> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
+--- @param inx number
+--- @param iny number
+--- @param inz number
+--- @return number x
+--- @return number y
+--- @return boolean visible
+function lje.util.world_to_screen(inx, iny, inz)
+    local w = inx * m12 + iny * m13 + inz * m14 + m15
+    if (w > 0.001) then
+        local i = 1 / w
+        local rawx = (inx * m0 + iny * m1 + inz * m2 + m3)
+        local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
+        local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
+        local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
+        local frustum = w * 2
+        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
+    end
+
+    return -1, -1, false
+end
+
+--> Does the same as lje.util.world_to_screen but takes in a vector instead of three numbers
+-->
+--> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
+--- @param vector Vector
+--- @return number x
+--- @return number y
+--- @return boolean visible
+function lje.util.world_to_screen_vector(vector)
+    local inx, iny, inz = vector[1], vector[2], vector[3]
+    local w = inx * m12 + iny * m13 + inz * m14 + m15
+    if (w > 0.001) then
+        local i = 1 / w
+        local rawx = (inx * m0 + iny * m1 + inz * m2 + m3)
+        local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
+        local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
+        local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
+        local frustum = w * 2
+        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
+    end
+
+    return -1, -1, false
+end
+
 local util_is_player = lje.util.is_player
 local debug_getmetatable = debug.getmetatable
-local npc_metatable = FindMetaTable("NPC")
-hook.pre("OnEntityCreated", "__ljeutil_entities", function(entity)
+local npc_metatable = _R.NPC
+hook.pre("OnEntityCreated", "__lje_util_entities", function(entity)
     if (util_is_player(entity)) then
         playercount = playercount + 1
         players[playercount] = entity
 
-        if (not rawequal(entity, localplayer)) then
+        if (entity ~= localplayer) then
             otherplayercount = otherplayercount + 1
             otherplayers[otherplayercount] = entity
         end
 
-        hook.callpre("ljeutil/playerconnect", entity)
-        hook.callpost("ljeutil/playerconnect", entity)
-    elseif (rawequal(debug_getmetatable(entity), npc_metatable)) then
+        hook.callpre("lje-util/playerconnect", entity)
+        hook.callpost("lje-util/playerconnect", entity)
+    elseif (debug_getmetatable(entity) == npc_metatable) then
         npcdict[entity] = true
         npccount = npccount + 1
         npcs[npccount] = entity
@@ -332,14 +389,14 @@ hook.pre("OnEntityCreated", "__ljeutil_entities", function(entity)
     entities[entitycount] = entity
 end)
 
-hook.pre("EntityRemoved", "__ljeutil_entities", function(entity, fullupdate)
+hook.pre("EntityRemoved", "__lje_util_entities", function(entity, fullupdate)
     if (util_is_player(entity)) then
         if (not fullupdate--[[ and not rawequal(entity, localplayer)]]) then
             playercount = searchandremove(players, entity, playercount)
-            otherplayercount = searchandremove(otherplayers, entity, otherplayercount) --> this could be faster as both arrays are almost identical
+            otherplayercount = searchandremove(otherplayers, entity, otherplayercount) --> This could be faster as both arrays are almost identical
 
-            hook.callpre("ljeutil/playerdisconnect", entity)
-            hook.callpost("ljeutil/playerdisconnect", entity)
+            hook.callpre("lje-util/playerdisconnect", entity)
+            hook.callpost("lje-util/playerdisconnect", entity)
         end
     elseif (npcdict[entity]) then
         npcdict[entity] = nil
@@ -348,9 +405,6 @@ hook.pre("EntityRemoved", "__ljeutil_entities", function(entity, fullupdate)
 
     entitycount = searchandremove(entities, entity, entitycount)
 end)
-
-local screenwidth = ScrW()
-local screenheight = ScrH()
 
 --> Returns the width of the screen - This does not factor in viewports
 --- @return integer
@@ -364,12 +418,12 @@ function ScrH()
     return screenheight
 end
 
-hook.pre("OnScreenSizeChanged", "__ljeutil_screensize", function(oldwidth, oldheight, newwidth, newheight)
+hook.pre("OnScreenSizeChanged", "__lje_util_screensize", function(oldwidth, oldheight, newwidth, newheight)
     screenwidth = newwidth
     screenheight = newheight
 end)
 
-hook.pre("InitPostEntity", "__ljeutil_localplayer", function()
+hook.pre("InitPostEntity", "__lje_util_localplayer", function()
     localplayer = LocalPlayer()
     function LocalPlayer()
         return localplayer
@@ -382,10 +436,9 @@ hook.pre("InitPostEntity", "__ljeutil_localplayer", function()
     otherplayers = player_GetAll()
     
     otherplayercount = searchandremove(otherplayers, localplayer, otherplayercount)
-    hook.removepre("InitPostEntity", "__ljeutil_localplayer")
+    hook.removepre("InitPostEntity", "__lje_util_localplayer")
 end)
 
---> a for loop is used here because this is only executed once so the performance overhead is not a concern
 for _, entity in ipairs(ents.GetAll()) do
     if (lje.util.is_npc(entity)) then
         npccount = npccount + 1

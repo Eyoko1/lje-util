@@ -27,7 +27,6 @@ local tabwidth = 50
 
 local white = lje.util.color_strict(255, 255, 255, 255)
 
-local environment = lje.env.get()
 local draw = {
     SimpleText = function(text, font, x, y, color, xalign, yalign) end,
     SimpleTextOutlined = function(text, font, x, y, color, xalign, yalign, outlinewidth, outlinecolor) end,
@@ -41,11 +40,20 @@ local draw = {
     TexturedQuad = function(texturedata) end, --> do not use this unless it is absolutely necessary
     WordBox = function(bordersize, x, y, text, font, boxcolor, textcolor, xalign, yalign) end
 }
-environment.draw = draw
+_G.draw = draw
 
+--- @param text string
+--- @param font string
+--- @param x number
+--- @param y number
+--- @param colour Color?
+--- @param xalign TEXT_ALIGN
+--- @param yalign TEXT_ALIGN
+--- @return number width
+--- @return number height
 function draw.SimpleText(text, font, x, y, colour, xalign, yalign)
     text = tostring(text)
-    -- who doesn't provide these?
+    --> Who doesn't pass these?
     --x = x or 0
     --y = y or 0
 
@@ -76,9 +84,20 @@ function draw.SimpleText(text, font, x, y, colour, xalign, yalign)
     return width, height
 end
 
+--- @param text string
+--- @param font string
+--- @param x number
+--- @param y number
+--- @param colour Color
+--- @param xalign TEXT_ALIGN
+--- @param yalign TEXT_ALIGN
+--- @param outlinewidth number
+--- @param outlinecolour Color
+--- @return number width
+--- @return number height
 function draw.SimpleTextOutlined(text, font, x, y, colour, xalign, yalign, outlinewidth, outlinecolour)
     text = tostring(text)
-    -- who doesn't provide these?
+    --> Who doesn't pass these?
     --x = math_ceil(x or 0)
     --y = math_ceil(y or 0)
     --colour = colour or white
@@ -157,8 +176,15 @@ local function __drawtext(text, x, y, xalign)
     return size
 end
 
+--- @param text string
+--- @param font string
+--- @param x number
+--- @param y number
+--- @param colour Color
+--- @param xalign TEXT_ALIGN
+--- @return nil
 function draw.DrawText(text, font, x, y, colour, xalign)
-    -- When would anyone ever not pass these arguments?
+    --> When would anyone ever not pass these arguments?
     text = tostring(text)
 
     surface_SetFont(font)
@@ -187,7 +213,7 @@ function draw.DrawText(text, font, x, y, colour, xalign)
         goto inner
     else
         __drawtext(string_sub(substring, j), currentx, currenty, xalign)
-        -- Fall through
+        --> Fall through
     end
 
     if (nextnewline) then
@@ -212,6 +238,8 @@ function draw.GetFontHeight(font)
 end
 
 local blanktexture = surface.GetTextureID("vgui/white")
+
+--- @return nil
 function draw.NoTexture()
     surface_SetTexture(blanktexture)
 end
@@ -221,6 +249,18 @@ local corner16 = surface.GetTextureID("gui/corner16")
 local corner32 = surface.GetTextureID("gui/corner32")
 local corner64 = surface.GetTextureID("gui/corner64")
 local corner512 = surface.GetTextureID("gui/corner512")
+
+--- @param bordersize number
+--- @param x number
+--- @param y number
+--- @param width number
+--- @param height number
+--- @param color Color
+--- @param topleft boolean
+--- @param topright boolean
+--- @param bottomleft boolean
+--- @param bottomright boolean
+--- @return nil
 function draw.RoundedBoxEx(bordersize, x, y, width, height, color, topleft, topright, bottomleft, bottomright)
     surface_SetDrawColor(color.r, color.g, color.b, color.a)
 
@@ -229,7 +269,7 @@ function draw.RoundedBoxEx(bordersize, x, y, width, height, color, topleft, topr
         return
     end
     
-    -- This can be simplified but it doesn't matter and has no effect on performance
+    --> This can be simplified but it doesn't matter and has no effect on performance
     if (width < height) then
         if (width < bordersize) then
             bordersize = width * 0.5
@@ -289,6 +329,13 @@ function draw.RoundedBoxEx(bordersize, x, y, width, height, color, topleft, topr
     end
 end
 
+--- @param bordersize number
+--- @param x number
+--- @param y number
+--- @param width number
+--- @param height number
+--- @param color Color
+--- @return nil
 function draw.RoundedBox(bordersize, x, y, width, height, color)
     surface_SetDrawColor(color.r, color.g, color.b, color.a)
 
@@ -297,7 +344,7 @@ function draw.RoundedBox(bordersize, x, y, width, height, color)
         return
     end
     
-    -- This can be simplified but it doesn't matter and has no effect on performance
+    --> This can be simplified but it doesn't matter and has no effect on performance
     if (width < height) then
         if (width < bordersize) then
             bordersize = width * 0.5
@@ -339,14 +386,24 @@ function draw.RoundedBox(bordersize, x, y, width, height, color)
 end
 
 local SimpleText = draw.SimpleText
+
+--- @param textdata TextData
+--- @return number? width
+--- @return number? height
 function draw.Text(textdata)
     local pos = textdata.pos
     return SimpleText(textdata.text, textdata.font, pos[1], pos[2], textdata.color, textdata.xalign, textdata.yalign)
 end
 
 local textshadowcolor = Color(0, 0, 0, 200)
+
+--- @param textdata TextData
+--- @param distance number
+--- @param alpha number
+--- @return number? width
+--- @return number? width
 function draw.TextShadow(textdata, distance, alpha)
-    -- The calls to draw.Text have been inlined to improve performance
+    --> The calls to draw.Text have been inlined to improve performance
     local text = textdata.text
     local font = textdata.font
     local pos = textdata.pos
@@ -374,6 +431,8 @@ function draw.TextShadow(textdata, distance, alpha)
     )
 end
 
+--- @param texturedata TextureData
+--- @return nil
 function draw.TexturedQuad(texturedata)
     local color = texturedata.color or white
     surface_SetTexture(texturedata.texture)
@@ -382,6 +441,18 @@ function draw.TexturedQuad(texturedata)
 end
 
 local RoundedBox = draw.RoundedBox
+
+--- @param bordersize number
+--- @param x number
+--- @param y number
+--- @param text string
+--- @param font string
+--- @param color Color
+--- @param fontcolor Color
+--- @param xalign TEXT_ALIGN
+--- @param yalign TEXT_ALIGN
+--- @return number width
+--- @return number width
 function draw.WordBox(bordersize, x, y, text, font, color, fontcolor, xalign, yalign)
     surface_SetFont(font)
     local width, height = surface_GetTextSize(text)
