@@ -23,6 +23,8 @@ local function verifyteaminfo()
     return true
 end
 
+--- @param index integer
+--- @return Color
 function team.GetColor(index)
     if (not verifyteaminfo()) then
         return Color(defaultcolor.r, defaultcolor.g, defaultcolor.b, defaultcolor.a)
@@ -32,6 +34,8 @@ function team.GetColor(index)
     return Color(color.r, color.g, color.b, color.a)
 end
 
+--- @param index integer
+--- @return string
 function team.GetName(index)
     if (not verifyteaminfo()) then
         return ""
@@ -40,6 +44,8 @@ function team.GetName(index)
     return teaminfo[index].Name or ""
 end
 
+--- @param index integer
+--- @return Player[]
 function team.GetPlayers(index)
     if (not verifyteaminfo()) then
         return {}
@@ -54,9 +60,11 @@ function team.GetPlayers(index)
     return players
 end
 
+--- @param index integer
+--- @return integer
 function team.NumPlayers(index)
     if (not verifyteaminfo()) then
-        return {}
+        return 0
     end
 
     local count = 0

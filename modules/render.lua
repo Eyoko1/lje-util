@@ -38,10 +38,22 @@ local cam3dtable = {
 }
 
 local cam_Start = cam.Start
+
+--- @return nil
 function cam.Start2D()
     cam_Start(cam2dtable)
 end
 
+--- @param pos Vector?
+--- @param ang Angle?
+--- @param fov number?
+--- @param x number?
+--- @param y number?
+--- @param w number?
+--- @param h number?
+--- @param znear number?
+--- @param zfar number?
+--- @return nil
 function cam.Start3D(pos, ang, fov, x, y, w, h, znear, zfar)
 	cam3dtable.origin = pos
 	cam3dtable.angles = ang
@@ -72,6 +84,7 @@ end
 local overrideblend = false
 
 --> Overrides the blend for the next frame - Used to correctly render depth to the screen, for example when drawing with render.RenderView
+--- @return nil
 function lje.util.override_blend()
     overrideblend = true
 end

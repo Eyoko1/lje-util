@@ -272,6 +272,7 @@ end
 
 --> Returns the number of entities on the server - Unlike the normal function, includekillme is true by default
 --- @param includekillme boolean? Default is true
+--- @return integer
 function ents.GetCount(includekillme)
     if (includekillme == false) then
         return ents_GetCount(false) --> I couldn't find an easy way to make this fast so I swapped the logic of the function, as I don't think includekillme has any effect on people normally
@@ -309,6 +310,7 @@ local flmatrix = Matrix()
 local m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = VMATRIX_Unpack(flmatrix)
 
 --> Sets up the data required for world-to-screen operations
+--- @return nil
 function lje.util.setup_viewmatrix()
     flmatrix = cam_GetProjectionMatrix()
     VMATRIX_Mul(flmatrix, cam_GetViewMatrix())

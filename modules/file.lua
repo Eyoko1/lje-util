@@ -11,6 +11,10 @@ local FILE_Close = FILE.Close
 local FILE_Write = FILE.Write
 
 local file_Open = file.Open
+
+--- @param filename string
+--- @param path string
+--- @return string?
 function file.Read(filename, path)
     if (path == true) then
         path = "GAME"
@@ -29,6 +33,9 @@ function file.Read(filename, path)
     return str or ""
 end
 
+--- @param filename string
+--- @param contents string
+--- @return boolean
 function file.Write(filename, contents)
     local f = file_Open(filename, "wb", "DATA")
     if (not f) then
@@ -41,6 +48,9 @@ function file.Write(filename, contents)
     return true
 end
 
+--- @param filename string
+--- @param contents string
+--- @return boolean
 function file.Append(filename, contents)
     local f = file_Open(filename, "ab", "DATA")
     if (not f) then

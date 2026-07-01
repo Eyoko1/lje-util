@@ -7,6 +7,8 @@ local create_table = lje.util.create_table
 
 local table_concat = table.concat
 
+--- @param str string
+--- @return string[]
 function string.ToTable(str)
     str = tostring(str)
 
@@ -16,15 +18,20 @@ function string.ToTable(str)
     ::totable_loop::
     tbl[i] = string_sub(str, i, i)
 
-    if (i == length) then
-        return tbl
+    if (i ~= length) then
+        i = i + 1
+        goto totable_loop
     end
-
-    i = i + 1
-    goto totable_loop
+    
+    return tbl
 end
 
 local totable = string.ToTable
+
+--- @param separator string
+--- @param str string
+--- @param withpattern boolean?
+--- @return string[]
 function string.Explode(separator, str, withpattern)
 	if (separator == "") then return totable(str) end
 
@@ -56,18 +63,32 @@ function string.Explode(separator, str, withpattern)
 end
 
 local string_Explode = string.Explode
+
+--- @param str string
+--- @param delimiter string
+--- @return string[]
 function string.Split(str, delimiter)
     return string_Explode(delimiter, str)
 end
 
+--- @param str string
+--- @param start string
+--- @return boolean
 function string.StartsWith(str, start)
     return string_sub(str, 1, #start) == start
 end
 
+--- @param str string
+--- @param endstr string
+--- @return boolean
 function string.EndsWith(str, endstr)
     return endstr == "" or string_sub(str, -(#endstr)) == endstr
 end
 
+--- @param str string
+--- @param tofind string
+--- @param toreplace string
+--- @return string
 function string.Replace(str, tofind, toreplace)
     local tbl = string_Explode(tofind, str)
     if (tbl[1]) then

@@ -58,7 +58,10 @@ draw = {
     --> Avoid using this
     TextShadow = function(textdata, distance, alpha) end,
 
+    --> Avoid using this
     TexturedQuad = function(texturedata) end,
+
+    --> Avoid using this
     WordBox = function(bordersize, x, y, text, font, boxcolor, textcolor, xalign, yalign) end
 }
 

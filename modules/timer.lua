@@ -19,7 +19,12 @@ local timercount = 0
 
 local earlieststop = math.huge
 
-local function createtimernode(identifier, delay, repetitions, callback)
+--- @param identifier string
+--- @param delay number
+--- @param repetitions integer
+--- @param func function
+--- @return nil
+local function createtimernode(identifier, delay, repetitions, func)
     if (delay < 0) then
         delay = 0
     end
@@ -30,7 +35,7 @@ local function createtimernode(identifier, delay, repetitions, callback)
         identifier = identifier,
         delay = delay,
         repetitions = repetitions,
-        callback = callback,
+        callback = func,
         paused = false,
         stoptime = stoptime,
         pausedelta = 0
@@ -68,6 +73,8 @@ local function findearliest()
     end
 end
 
+--- @param identifier string
+--- @return nil
 local function removetimernode(identifier)
     for i = 1, timercount do
         local node = timers[i]
@@ -80,6 +87,11 @@ local function removetimernode(identifier)
     end
 end
 
+--- @param identifier string
+--- @param delay number
+--- @param repetitions integer
+--- @param func function
+--- @return nil
 function timer.Adjust(identifier, delay, repetitions, func)
     for i = 1, timercount do
         local node = timers[i]
@@ -102,6 +114,7 @@ function timer.Adjust(identifier, delay, repetitions, func)
     end
 end
 
+--- @return nil
 function timer.Check()
     --> No-op
 end
@@ -110,10 +123,14 @@ timer.Create = createtimernode
 
 timer.Destroy = removetimernode
 
+--- @param identifier string
+--- @return boolean
 function timer.Exists(identifier)
     return findtimernode(identifier) ~= nil
 end
 
+--- @param identifier string
+--- @return boolean?
 function timer.IsPaused(identifier)
     local node = findtimernode(identifier)
     if (node) then
@@ -121,6 +138,8 @@ function timer.IsPaused(identifier)
     end
 end
 
+--- @param identifier string
+--- @return nil
 function timer.Pause(identifier)
     local node = findtimernode(identifier)
     if (node) then
@@ -133,6 +152,8 @@ end
 
 timer.Remove = removetimernode
 
+--- @param identifier string
+--- @return integer?
 function timer.RepsLeft(identifier)
     local node = findtimernode(identifier)
     if (node) then
@@ -140,10 +161,15 @@ function timer.RepsLeft(identifier)
     end
 end
 
+--- @param delay number
+--- @param func function
+--- @return nil
 function timer.Simple(delay, func)
     createtimernode(lje.util.random_string(), delay, 1, func)
 end
 
+--- @param identifier string
+--- @return nil
 function timer.Start(identifier)
     local node = findtimernode(identifier)
     if (node and node.paused) then
@@ -153,6 +179,8 @@ function timer.Start(identifier)
     end
 end
 
+--- @param identifier string
+--- @return nil
 function timer.Stop(identifier)
     local node = findtimernode(identifier)
     if (node) then
@@ -163,6 +191,8 @@ function timer.Stop(identifier)
     end
 end
 
+--- @param identifier string
+--- @return number?
 function timer.TimeLeft(identifier)
     local node = findtimernode(identifier)
     if (node) then
@@ -170,6 +200,8 @@ function timer.TimeLeft(identifier)
     end
 end
 
+--- @param identifier string
+--- @return nil
 function timer.Toggle(identifier)
     local node = findtimernode(identifier)
     if (node) then
@@ -186,6 +218,8 @@ function timer.Toggle(identifier)
     end
 end
 
+--- @param identifier string
+--- @return nil
 function timer.UnPause(identifier)
     local node = findtimernode(identifier)
     if (node and node.paused) then

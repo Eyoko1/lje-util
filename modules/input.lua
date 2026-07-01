@@ -68,6 +68,7 @@ end
 
 --> Adds the given delta angle to the desired angle
 --- @param delta Angle
+--- @return nil
 function lje.input.sendangle(delta)
     if (not hasinputcontext) then
         nonhalting("lje.input.* functions can only be called in 'lje-util/input' hooks!")
