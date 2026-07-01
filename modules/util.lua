@@ -332,7 +332,7 @@ function lje.util.world_to_screen(inx, iny, inz)
         local rawy = (inx * m4 + iny * m5 + inz * m6 + m7)
         local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
         local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
-        local frustum = w * 1.25
+        local frustum = w * 2
         return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
     end
 
