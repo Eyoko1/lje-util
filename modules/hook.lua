@@ -233,15 +233,6 @@ end
 
 --------------------------------
 
-local function __callnode(node, ...)
-    ::call_node::
-    node[2--[[NODE_CALLBACK]]](...)
-    node = node[3--[[NODE_NEXT]]]
-    if (node) then
-        goto call_node
-    end
-end
-
 local type = type
 local lje_proxy_copy = lje.proxy.copy
 local unpack = unpack
@@ -250,14 +241,14 @@ local runpath = lje.state.path(lje.state.client, "hook"):index("Run")
 local copypath = callpath.copy
 
 local inhookcall = false
-local activeargs = {}
 local postnode = nil
-lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
+local ha, hb, hc, hd, he, hf
+
+lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b, c, d, e, f)
     if (not func) then
         return
     end
 
-    local args
     local copycount
     local hooks
     if (func == copypath(callpath)) then -- hook.Call
@@ -265,44 +256,69 @@ lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
         if (not hooks) then
             return
         end
-        args = {...}
         copycount = nargs - 2
     elseif (func == copypath(runpath)) then -- hook.Run (an edge case where some events are called with hook.Run such as DrawOverlay)
         hooks = hooklist[event]
         if (not hooks) then
             return
         end
-        args = {gm, ...}
+        f = e
+        e = d
+        d = c
+        c = b
+        b = a
+        a = gm
         copycount = nargs - 1
     else
         return -- We aren't in hook.* so let's just exit
     end
 
-    for i = 1, copycount do
-        local value = args[i]
-        if (type(value) == "userdata") then
-            args[i] = lje_proxy_copy(value)
-        end
-    end
+    if (copycount >= 1) then
+    if (type(a) == "userdata") then a = lje_proxy_copy(a) end
+    if (copycount >= 2) then
+    if (type(b) == "userdata") then b = lje_proxy_copy(b) end
+    if (copycount >= 3) then
+    if (type(c) == "userdata") then c = lje_proxy_copy(c) end
+    if (copycount >= 4) then
+    if (type(d) == "userdata") then d = lje_proxy_copy(d) end
+    if (copycount >= 5) then
+    if (type(e) == "userdata") then e = lje_proxy_copy(e) end
+    if (copycount >= 6) then
+    if (type(f) == "userdata") then f = lje_proxy_copy(f) end
+    end end end end end end
 
     local node = hooks[1--[[PRE_HOOK_NODE]]]
     if (node) then
-        __callnode(node, unpack(args))
+        --> Run the pre node
+        ::call_node::
+        node[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
+        node = node[3--[[NODE_NEXT]]]
+        if (node) then
+            goto call_node
+        end
     end
 
     postnode = hooks[2--[[POST_HOOK_NODE]]]
     if (postnode) then
         inhookcall = true
-        activeargs = args
+        ha, hb, hc, hd, he, hf = a, b, c, d, e, f
     end
 end)
 
-lje.vm.add_post_engine_call_hook(function(func, nargs, nresults, event, gm, ...)
+lje.vm.add_post_engine_call_hook(function()
     if (not inhookcall) then
         return
     end
 
     inhookcall = false
-    __callnode(postnode, unpack(activeargs))
-    activeargs = nil
+
+    --- @cast postnode -nil
+
+    --> Run the post node
+    ::call_node::
+    postnode[2--[[NODE_CALLBACK]]](ha, hb, hc, hd, he, hf)
+    postnode = postnode[3--[[NODE_NEXT]]]
+    if (postnode) then
+        goto call_node
+    end
 end)
