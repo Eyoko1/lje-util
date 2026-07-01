@@ -44,6 +44,7 @@ def parse(data: dict[str, JSONInstance]):
     namespace = data["namespace"]
     constants = data["constants"] if ("constants" in data) else []
     functions = data["functions"] if ("functions" in data) else []
+    classes = data["classes"] if ("classes" in data) else []
 
     isbase = namespace == "base"
 
@@ -54,6 +55,23 @@ def parse(data: dict[str, JSONInstance]):
         fprefix = "lje." + namespace + "."
         cprefix = fprefix
         namespaces.append(f"{getformatteddescription(data['description'])}\nlje.{namespace} = {{}}")
+
+    for ljeclass in classes:
+        line = []
+        line.append("--- " + ljeclass["description"])
+        line.append("--- @class " + ljeclass["name"])
+        for method in ljeclass["methods"]:
+            params = []
+            for param in method["params"]:
+                params.append(f"{param['name']}: {param['type']}")
+
+            returns = []
+            for ret in method["returns"]:
+                returns.append(ret['type'])
+
+            funcdef = f"fun({', '.join(params)}): {', '.join(returns)}"
+
+            line.append(f"--- @field {method['name']} {funcdef} {method['description']}")
     
     for const in constants:
         if (isbase and not const['name'].startswith("lje.")):

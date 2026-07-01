@@ -66,6 +66,9 @@ local npccount = 0
 local npcs = {}
 local npcdict = setmetatable({}, {__mode = "k"})
 
+local screenwidth = ScrW()
+local screenheight = ScrH()
+
 local table_remove = table.remove
 local function searchandremove(tbl, value, count)
     if (count <= 0) then
@@ -297,6 +300,58 @@ function lje.util.get_mutable_entities()
     return mutable
 end
 
+local cam_GetViewMatrix = cam.GetViewMatrix
+local cam_GetProjectionMatrix = cam.GetProjectionMatrix
+local VMATRIX_Mul = VMATRIX.Mul
+local VMATRIX_Unpack = VMATRIX.Unpack
+
+local flmatrix = Matrix()
+local m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = VMATRIX_Unpack(flmatrix)
+
+--> Sets up the data required for world-to-screen operations
+function lje.util.setup_viewmatrix()
+    flmatrix = cam_GetProjectionMatrix()
+    VMATRIX_Mul(flmatrix, cam_GetViewMatrix())
+    m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = VMATRIX_Unpack(flmatrix)
+end
+
+--> Performs a world-to-screen calculation using the given coordinates. This is cheaper than using Vector:ToScreen() as it does not create a ToScreenData struct
+-->
+--> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
+--- @param inx number
+--- @param iny number
+--- @param inz number
+--- @return number, number, boolean
+function lje.util.world_to_screen(inx, iny, inz)
+    local w = inx * m12 + iny * m13 + inz * m14 + m15
+    if (w > 0.01) then
+        local i = 1 / w
+        local outx = (((inx * m0 + iny * m1 + inz * m2 + m3) * i) * 0.5 + 0.5) * screenwidth
+        local outy = (1 - (((inx * m4 + iny * m5 + inz * m6 + m7) * i) * 0.5 + 0.5)) * screenheight
+        return outx, outy, true
+    end
+
+    return 0, 0, true
+end
+
+--> Does the same as lje.util.world_to_screen but takes in a vector instead of three numbers
+-->
+--> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
+--- @param vector Vector
+--- @return number, number, boolean
+function lje.util.world_to_screen_vector(vector)
+    local inx, iny, inz = vector[1], vector[2], vector[3]
+    local w = inx * m12 + iny * m13 + inz * m14 + m15
+    if (w > 0.01) then
+        local i = 1 / w
+        local outx = (((inx * m0 + iny * m1 + inz * m2 + m3) * i) * 0.5 + 0.5) * screenwidth
+        local outy = (1 - (((inx * m4 + iny * m5 + inz * m6 + m7) * i) * 0.5 + 0.5)) * screenheight
+        return outx, outy, true
+    end
+
+    return 0, 0, true
+end
+
 local util_is_player = lje.util.is_player
 local debug_getmetatable = debug.getmetatable
 local npc_metatable = _R.NPC
@@ -338,9 +393,6 @@ hook.pre("EntityRemoved", "__lje_util_entities", function(entity, fullupdate)
 
     entitycount = searchandremove(entities, entity, entitycount)
 end)
-
-local screenwidth = ScrW()
-local screenheight = ScrH()
 
 --> Returns the width of the screen - This does not factor in viewports
 --- @return integer
