@@ -1,9 +1,9 @@
 --> [team.lua] <--
 --> Adds some team.* functions <--
 
---> This is not guaranteed to work since some servers / anticheats can edit the team table too much for this to automatically detect data
+--> This is not guaranteed to work since some servers / anticheats can edit the team table in a way that prevents this from working
 
---- @alias Reference {[1]: any}
+--- @TODO: Perform some form of pattern scanning in an attempt to prevent this from breaking due to additional upvalues in the function we search for the teams table
 
 team = {}
 

@@ -72,7 +72,7 @@ end
 local overrideblend = false
 
 --> Overrides the blend for the next frame - Used to correctly render depth to the screen, for example when drawing with render.RenderView
-function lje.util.overrideblend()
+function lje.util.override_blend()
     overrideblend = true
 end
 

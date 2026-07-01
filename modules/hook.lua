@@ -233,17 +233,6 @@ end
 
 --------------------------------
 
---> The references to the enums here can be inlined but it doesn't really matter that much
-local is_lua_involved = lje.env.is_lua_involved
-
-local a2, b2, c2, d2, e2, f2
-
---> Returns the values that the default gmod callback returned - this will only return valid results in hook.post callbacks
---- @return any, any, any, any, any, any
-function hook.getreturns()
-    return a2, b2, c2, d2, e2, f2
-end
-
 local function __callnode(node, ...)
     ::call_node::
     node[2--[[NODE_CALLBACK]]](...)
