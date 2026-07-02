@@ -200,14 +200,14 @@ function lje.util.color_strict(r, g, b, a)
     }
 end
 
---> Returns whether or not the given entity is a player - this should be used instead of entity:IsPlayer()
+--> Returns whether or not the given entity is a player - this should be used instead of _R.Entity.IsPlayer(entity)
 --- @param entity Entity
 --- @return boolean
 function lje.util.is_player(entity)
     return ENTITY_GetClass(entity) == "player"
 end
 
---> Returns whether or not the given entity is an npc - this should be used instead of entity:IsNPC()
+--> Returns whether or not the given entity is an npc - this should be used instead of _R.Entity.IsNPC(entity)
 --- @param entity Entity
 --- @return boolean
 function lje.util.is_npc(entity)
@@ -379,7 +379,7 @@ hook.pre("OnEntityCreated", "__lje_util_entities", function(entity)
 
         hook.callpre("lje-util/playerconnect", entity)
         hook.callpost("lje-util/playerconnect", entity)
-    elseif (debug_getmetatable(entity) == npc_metatable) then
+    elseif (entity:IsNPC()) then
         npcdict[entity] = true
         npccount = npccount + 1
         npcs[npccount] = entity
