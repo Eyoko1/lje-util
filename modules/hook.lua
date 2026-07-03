@@ -240,6 +240,9 @@ local callpath = lje.state.path(lje.state.client, "hook"):index("Call")
 local runpath = lje.state.path(lje.state.client, "hook"):index("Run")
 local copypath = callpath.copy
 
+local hookcall = nil
+local hookrun = nil
+
 local inhookcall = false
 local postnode = nil
 local ha, hb, hc, hd, he, hf
@@ -249,15 +252,20 @@ lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b,
         return
     end
 
+    if (not hookcall) then
+        hookcall = copypath(callpath)
+        hookrun = copypath(runpath)
+    end
+
     local copycount
     local hooks
-    if (func == copypath(callpath)) then -- hook.Call
+    if (func == hookcall --[[copypath(callpath)]]) then -- hook.Call
         hooks = hooklist[event]
         if (not hooks) then
             return
         end
         copycount = nargs - 2
-    elseif (func == copypath(runpath)) then -- hook.Run (an edge case where some events are called with hook.Run such as DrawOverlay)
+    elseif (func == hookrun--[[copypath(runpath)]]) then -- hook.Run (an edge case where some events are called with hook.Run such as DrawOverlay)
         hooks = hooklist[event]
         if (not hooks) then
             return

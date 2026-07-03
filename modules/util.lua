@@ -375,10 +375,26 @@ end
 --> Equivalent to render.ComputePixelDiameterOfSphere, but it does not require an active 3D context
 -->
 --> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
+--- @param x number
+--- @param y number
+--- @param z number
+--- @param radius number
+--- @return number
+function lje.util.compute_sphere_diameter(x, y, z, radius)
+    local w = x * m12 + y * m13 + z * m14 + m15
+    if (w <= 0.001) then
+        return 0
+    end
+    return (radius * screenheight) / w
+end
+
+--> Does the same as lje.util.compute_sphere_diameter but takes in a vector instead
+-->
+--> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
 --- @param vector Vector
 --- @param radius number
 --- @return number
-function lje.util.compute_sphere_diameter(vector, radius)
+function lje.util.compute_sphere_diameter_vector(vector, radius)
     local x, y, z = VECTOR_Unpack(vector)
     local w = x * m12 + y * m13 + z * m14 + m15
     if (w <= 0.001) then

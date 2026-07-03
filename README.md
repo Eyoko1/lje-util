@@ -226,7 +226,12 @@ lje.util = {
 
     --> Equivalent to render.ComputeSpherePixelDiameterOfSphere, however it does not a require an active 3D context
     --> Requires the viewmatrix to be setup
-    compute_sphere_diameter = function(vector, radius) end
+    compute_sphere_diameter = function(vector, radius) end,
+    
+    --> Equivalent to compute_sphere_diameter, but takes a vector instead of the raw coordinates
+    --> Requires the viewmatrix to be setup
+    compute_sphere_diameter = function(vector, radius) end,
+
 }
 
 lje.input = {
