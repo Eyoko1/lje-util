@@ -44,6 +44,8 @@ local ENTITY_DrawModel = ENTITY.DrawModel
 local create_table = lje.util.create_table
 local ENTITY_GetClass = ENTITY.GetClass
 local ents_GetCount = ents.GetCount
+local VECTOR_Unpack = VECTOR.Unpack
+local VECTOR_SetUnpacked = VECTOR.SetUnpacked
 
 local randomstringcharacters = {" ", "!", "#", "$", "%", "&", "+", ",", "-", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "^", "_", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
 local randomstringcharactercount = #randomstringcharacters
@@ -317,7 +319,9 @@ function lje.util.setup_viewmatrix()
     m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 = VMATRIX_Unpack(flmatrix)
 end
 
---> Performs a world-to-screen calculation using the given coordinates. This is cheaper than using Vector:ToScreen() as it does not create a ToScreenData struct
+--> Performs a world-to-screen calculation using the given coordinates
+-->
+--> This is cheaper than using Vector:ToScreen() as it does not create a ToScreenData struct
 -->
 --> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
 --- @param inx number
@@ -326,6 +330,7 @@ end
 --- @return number x
 --- @return number y
 --- @return boolean visible
+--- @return number w
 function lje.util.world_to_screen(inx, iny, inz)
     local w = inx * m12 + iny * m13 + inz * m14 + m15
     if (w > 0.001) then
@@ -335,10 +340,10 @@ function lje.util.world_to_screen(inx, iny, inz)
         local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
         local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
         local frustum = w * 2
-        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
+        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum, w
     end
 
-    return -1, -1, false
+    return -1, -1, false, -1
 end
 
 --> Does the same as lje.util.world_to_screen but takes in a vector instead of three numbers
@@ -348,8 +353,9 @@ end
 --- @return number x
 --- @return number y
 --- @return boolean visible
+--- @return number w
 function lje.util.world_to_screen_vector(vector)
-    local inx, iny, inz = vector[1], vector[2], vector[3]
+    local inx, iny, inz = VECTOR_Unpack(vector)
     local w = inx * m12 + iny * m13 + inz * m14 + m15
     if (w > 0.001) then
         local i = 1 / w
@@ -358,15 +364,30 @@ function lje.util.world_to_screen_vector(vector)
         local outx = ((rawx * i) * 0.5 + 0.5) * screenwidth
         local outy = (0.5 - ((rawy * i) * 0.5)) * screenheight
         local frustum = w * 2
-        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum
+        return outx, outy, rawx >= -frustum and rawx <= frustum and rawy >= -frustum and rawy <= frustum, w
     end
 
-    return -1, -1, false
+    return -1, -1, false, -1
+end
+
+--> Computes the diameter of a 3D sphere in terms of pixels on a 2D screen
+-->
+--> Equivalent to render.ComputePixelDiameterOfSphere, but it does not require an active 3D context
+-->
+--> You must call lje.util.setup_viewmatrix in a 3D context before calling this function
+--- @param vector Vector
+--- @param radius number
+--- @return number
+function lje.util.compute_sphere_diameter(vector, radius)
+    local x, y, z = VECTOR_Unpack(vector)
+    local w = x * m12 + y * m13 + z * m14 + m15
+    if (w <= 0.001) then
+        return 0
+    end
+    return (radius * screenheight) / w
 end
 
 local util_is_player = lje.util.is_player
-local debug_getmetatable = debug.getmetatable
-local npc_metatable = _R.NPC
 hook.pre("OnEntityCreated", "__lje_util_entities", function(entity)
     if (util_is_player(entity)) then
         playercount = playercount + 1

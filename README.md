@@ -216,11 +216,17 @@ lje.util = {
     --> Sets up the view matrix for future calls to lje.util.world_to_screen - this should be called every frame prior to using the world-to-screen functions - this requires a 3D rendering context to be active
     setup_viewmatrix = function() end,
 
-    --> Performs a world-to-screen calculation using the given coordinates - this is faster than calling Vector:ToScreen() as it does not allocate a new ToScreenData table for each call - this returns the x and y coordinates, as well as whether or not the point is visible
+    --> Performs a world-to-screen calculation using the given coordinates - this is faster than calling Vector:ToScreen() as it does not allocate a new ToScreenData table for each call - this returns the x and y coordinates, as well as whether or not the point is visibletes
+    --> Requires the viewmatrix to be setup
     world_to_screen = function(x, y, z) end,
 
     --> Equivalent to world_to_screen, but takes a vector instead of the raw coordinates
-    world_to_screen_vector = function(vector) end
+    --> Requires the viewmatrix to be setup
+    world_to_screen_vector = function(vector) end,
+
+    --> Equivalent to render.ComputeSpherePixelDiameterOfSphere, however it does not a require an active 3D context
+    --> Requires the viewmatrix to be setup
+    compute_sphere_diameter = function(vector, radius) end
 }
 
 lje.input = {

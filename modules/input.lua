@@ -20,6 +20,8 @@ local CUSERCMD_GetMouseX = CUSERCMD.GetMouseX
 local CUSERCMD_GetMouseY = CUSERCMD.GetMouseY
 local CONVAR_GetFloat = CONVAR.GetFloat
 local ANGLE_Normalize = ANGLE.Normalize
+local ANGLE_Unpack = ANGLE.Unpack
+local ANGLE_SetUnpacked = ANGLE.SetUnpacked
 
 local cv_sensitivity = GetConVar_Internal("sensitivity")
 local cv_myaw = GetConVar_Internal("m_yaw")
@@ -90,11 +92,13 @@ hook.pre("StartCommand", "__lje_util_input", function(_, cmd)
 
     local viewangles = CUSERCMD_GetViewAngles(cmd)
 
-    local viewp = viewangles[1]
-    local viewy = viewangles[2]
-    desiredangle[1] = viewp
-    desiredangle[2] = viewy
-    desiredangle[3] = viewangles[3]
+    local viewp, viewy, viewr = ANGLE_Unpack(viewangles)
+    ANGLE_SetUnpacked(
+        desiredangle,
+        viewp,
+        viewy,
+        viewr
+    )
 
     hasinputcontext = true
     hook_callpre("lje-util/input", cmd)
