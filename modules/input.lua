@@ -8,7 +8,6 @@ local CUSERCMD = _R.CUserCmd
 local ANGLE = _R.Angle
 
 local math_ceil = math.ceil
-local rawequal = rawequal
 local hook_callpre = hook.callpre
 local hook_callpost = hook.callpost
 

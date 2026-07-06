@@ -101,12 +101,14 @@ local render_PopRenderTarget = render.PopRenderTarget
 local hook_callpost = hook.callpost
 local render_Clear = render.Clear
 local cam_End2D = cam.End2D
+local render_SetWriteDepthToDestAlpha = render.SetWriteDepthToDestAlpha
 hook.post("PostRender", "__safert", function()
     --> @TODO: Remove this once LJE gets a safer built-in rendering method
     if (render_IsTakingScreenshot()) then return end
 
     cam_Start2D()
         render_PushRenderTarget(safert)
+            render_SetWriteDepthToDestAlpha(false)
             hook_callpre("lje-util/render")
             hook_callpre("lje-util/postrender")
 
@@ -129,6 +131,7 @@ hook.post("PostRender", "__safert", function()
             hook_callpost("lje-util/postrender")
 
             render_Clear(0, 0, 0, 0, true, true)
+            render_SetWriteDepthToDestAlpha(true)
         render_PopRenderTarget()
     cam_End2D()
 end)

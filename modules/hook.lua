@@ -248,15 +248,11 @@ local postnode = nil
 local ha, hb, hc, hd, he, hf
 
 lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b, c, d, e, f)
-    if (not func) then
-        return
-    end
+    --if (not func) then
+    --    return
+    --end
 
-    if (not hookcall) then
-        hookcall = copypath(callpath)
-        hookrun = copypath(runpath)
-    end
-
+    ::attempt_hooks::
     local copycount
     local hooks
     if (func == hookcall --[[copypath(callpath)]]) then -- hook.Call
@@ -278,6 +274,13 @@ lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b,
         a = gm
         copycount = nargs - 1
     else
+        if (not hookcall) then
+            hookcall = copypath(callpath)
+            hookrun = copypath(runpath)
+            if (hookcall) then
+                goto attempt_hooks
+            end
+        end
         return -- We aren't in hook.* so let's just exit
     end
 

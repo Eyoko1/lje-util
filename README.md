@@ -232,6 +232,10 @@ lje.util = {
     --> Requires the viewmatrix to be setup
     compute_sphere_diameter = function(vector, radius) end,
 
+    --> Returns the given team's RGBA components as separate numbers rather than as a color object
+    --> This is useful for reducing GC pressure from your scripts
+    get_team_rgba = function(index) end
+
 }
 
 lje.input = {

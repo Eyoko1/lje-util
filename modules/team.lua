@@ -76,6 +76,23 @@ function team.NumPlayers(index)
     return count
 end
 
+--> Returns the given team's RGBA color values separately, instead of as a Color object
+-->
+--> This is useful for optimising your scripts in order to lower GC pressure
+--- @param index integer
+--- @return integer r
+--- @return integer g
+--- @return integer b
+--- @return integer a
+function lje.util.get_team_rgba(index)
+    if (not verifyteaminfo()) then
+        return 255, 255, 255, 255
+    end
+
+    local color = teaminfo[index].Color or defaultcolor
+    return color.r, color.g, color.b, color.a
+end
+
 local lastteamrefresh = SysTime()
 hook.pre("Think", "__lje_util_teams", function()
     local time = SysTime()
