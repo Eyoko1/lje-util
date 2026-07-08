@@ -2,7 +2,7 @@
 --> Adds / optimises various table.* functions <--
 
 local select = select
-local pairs = RandomPairs
+local pairs = pairs
 local setmetatable = setmetatable
 local debug_getmetatable = debug.getmetatable
 local istable = istable
