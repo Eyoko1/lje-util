@@ -24,6 +24,7 @@ lje.include("modules/media.lua")
 lje.include("modules/input.lua")
 lje.include("modules/team.lua")
 lje.include("modules/timer.lua")
+lje.include("modules/table.lua")
 if (RUN_BENCHMARKS) then
     lje.include("modules/__benchmark.lua")
 end

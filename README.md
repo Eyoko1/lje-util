@@ -74,6 +74,25 @@ string = {
     Replace = function(str, tofind, toreplace) end
 }
 
+--> Only commonly used functions have been ported over
+table = {
+    Pack = function(...) end,
+    Inherit = function(t, base) end,
+    Copy = function(t, lookup_table) end,
+    Empty = function(tab) end,
+    IsEmpty = function(tab) end,
+    CopyFromTo = function(from, to) end,
+    Merge = function(dest, source, forceOverride) end,
+    HasValue = function(t, val) end,
+    Add = function(dest, source) end,
+    SortDesc = function(t) end,
+    SortByKey = function(t, desc) end,
+    Count = function(t) end,
+    Random = function(t) end,
+    Shuffle = function(t) end,
+    IsSequential = function(t) end
+}
+
 math = {
     Round = function(number, idp) end,
     Clamp = function(number, low, high) end,
@@ -85,7 +104,7 @@ math = {
 }
 
 hook = {
-    list = {}, --> event table
+    list = {}, --> Event table
 
     --> Registers a callback with the given identifier to be called before the regular lua callback is executed
     --> If an identifier is not passed, one will be generated and returned
