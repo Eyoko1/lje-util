@@ -102,6 +102,7 @@ local hook_callpost = hook.callpost
 local render_Clear = render.Clear
 local cam_End2D = cam.End2D
 local render_SetWriteDepthToDestAlpha = render.SetWriteDepthToDestAlpha
+local render_SetStencilEnable = render.SetStencilEnable
 hook.post("PostRender", "__safert", function()
     --> @TODO: Remove this once LJE gets a safer built-in rendering method
     if (render_IsTakingScreenshot()) then return end
@@ -109,6 +110,7 @@ hook.post("PostRender", "__safert", function()
     cam_Start2D()
         render_PushRenderTarget(safert)
             render_SetWriteDepthToDestAlpha(false)
+            render_SetStencilEnable(false) --> Servers could enable this and prevent us from drawing properly
             hook_callpre("lje-util/render")
             hook_callpre("lje-util/postrender")
 

@@ -468,10 +468,10 @@ hook.pre("InitPostEntity", "__lje_util_localplayer", function()
 
     playercount = player_GetCount()
     players = player_GetAll()
-    
+
     otherplayercount = player_GetCount()
     otherplayers = player_GetAll()
-    
+
     otherplayercount = searchandremove(otherplayers, localplayer, otherplayercount)
     hook.removepre("InitPostEntity", "__lje_util_localplayer")
 end)
