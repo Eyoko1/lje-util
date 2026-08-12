@@ -235,101 +235,100 @@ end
 
 local type = type
 local lje_proxy_copy = lje.proxy.copy
-local unpack = unpack
 local callpath = lje.state.path(lje.state.client, "hook"):index("Call")
-local runpath = lje.state.path(lje.state.client, "hook"):index("Run")
 local copypath = callpath.copy
 
-local hookcall = nil
-local hookrun = nil
+local hookcall
 
 local inhookcall = false
-local postnode = nil
-local ha, hb, hc, hd, he, hf
+local postnode
+
+local shouldcheck = true
 
 lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b, c, d, e, f)
-    --if (not func) then
-    --    return
-    --end
-
-    ::attempt_hooks::
-    local copycount
-    local hooks
-    if (func == hookcall --[[copypath(callpath)]]) then -- hook.Call
-        hooks = hooklist[event]
-        if (not hooks) then
+    if (func ~= hookcall) then
+        if (hookcall and not shouldcheck) then
             return
-        end
-        copycount = nargs - 2
-    elseif (func == hookrun--[[copypath(runpath)]]) then -- hook.Run (an edge case where some events are called with hook.Run such as DrawOverlay)
-        hooks = hooklist[event]
-        if (not hooks) then
-            return
-        end
-        f = e
-        e = d
-        d = c
-        c = b
-        b = a
-        a = gm
-        copycount = nargs - 1
-    else
-        if (not hookcall) then
+        else
             hookcall = copypath(callpath)
-            hookrun = copypath(runpath)
-            if (hookcall) then
-                goto attempt_hooks
+            if (func ~= hookcall) then
+                return
             end
+            --> hook.Call is now available so we'll fall through
         end
-        return -- We aren't in hook.* so let's just exit
     end
 
-    if (copycount >= 1) then
+    local hooks = hooklist[event]
+    if (not hooks) then
+        return
+    end
+
+    if (nargs >= 3) then
     if (type(a) == "userdata") then a = lje_proxy_copy(a) end
-    if (copycount >= 2) then
+    if (nargs >= 4) then
     if (type(b) == "userdata") then b = lje_proxy_copy(b) end
-    if (copycount >= 3) then
+    if (nargs >= 5) then
     if (type(c) == "userdata") then c = lje_proxy_copy(c) end
-    if (copycount >= 4) then
+    if (nargs >= 6) then
     if (type(d) == "userdata") then d = lje_proxy_copy(d) end
-    if (copycount >= 5) then
+    if (nargs >= 7) then
     if (type(e) == "userdata") then e = lje_proxy_copy(e) end
-    if (copycount >= 6) then
+    if (nargs >= 8) then
     if (type(f) == "userdata") then f = lje_proxy_copy(f) end
     end end end end end end
 
     local node = hooks[1--[[PRE_HOOK_NODE]]]
     if (node) then
         --> Run the pre node
+        --[=[
         ::call_node::
-        node[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
+        local x = node[2]
+        --node[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
         node = node[3--[[NODE_NEXT]]]
         if (node) then
             goto call_node
+        end
+        ]=]
+
+        --[=[
+        repeat
+            local x = node[2]
+            --node[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
+            node = node[3--[[NODE_NEXT]]]
+        until not node
+        ]=]
+
+        --> Seems to be the fastest iteration method according to my benchmarks
+        while (node) do
+            --local x = node[2]
+            node[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
+            node = node[3--[[NODE_NEXT]]]
         end
     end
 
     postnode = hooks[2--[[POST_HOOK_NODE]]]
     if (postnode) then
         inhookcall = true
-        ha, hb, hc, hd, he, hf = a, b, c, d, e, f
     end
 end)
 
-lje.vm.add_post_engine_call_hook(function()
+lje.vm.add_pre_engine_call_hook(function(func, event, gm, a, b, c, d, e, f)
     if (not inhookcall) then
         return
     end
 
     inhookcall = false
 
-    --- @cast postnode -nil
-
     --> Run the post node
     ::call_node::
-    postnode[2--[[NODE_CALLBACK]]](ha, hb, hc, hd, he, hf)
+    postnode[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
     postnode = postnode[3--[[NODE_NEXT]]]
     if (postnode) then
         goto call_node
     end
+end)
+
+hook.pre("InitPostEntity", "__lje-util_hookfix", function()
+    shouldcheck = false
+    hook.removepre("InitPostEntity", "__lje-util_hookfix")
 end)

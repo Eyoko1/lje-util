@@ -10,11 +10,9 @@ lje.__lje_util_loaded = true
 lje.include("modules/string.lua")
 lje.include("modules/math.lua")
 
-lje.con_print("Already loaded: " .. tostring(alreadyloaded))
 if (not alreadyloaded) then --> These should not be hot-reloaded
     lje.include("modules/hook.lua")
     lje.include("modules/util.lua")
-    lje.con_print("Unloaded!")
 end
 
 lje.include("modules/render.lua")
