@@ -110,7 +110,7 @@ timer.Simple(0.3, function()
     --benchmark(_G.player.GetCount, "player.GetCount (Base)", player.GetCount, "player.GetCount (lje-util)", {}, 1e6)
     --benchmark(_G.Color, "Color (Base)", Color, "Color (lje-util)", {255, 255, 255, 255}, 1e6)
     --benchmark(_G.Color, "Color (Base)", lje.util.color_strict, "lje.util.color_strict (lje-util)", {255, 255, 255, 255}, 1e6)
-    benchmark(lje.util.random_string, "lje.util.random_string (Old)", lje.util.__random_string, "lje.util.random_string (New)", {32}, 1e6)
+    --benchmark(lje.util.random_string, "lje.util.random_string (Old)", lje.util.__random_string, "lje.util.random_string (New)", {32}, 1e6)
 
     --benchmark(_G.draw.DrawText, "draw.DrawText (Base)", draw.DrawText, "draw.DrawText (lje-util)", {"test\n\t\n", "DermaDefault", 0, 0, color_white, TEXT_ALIGN_LEFT}, 1e6)
     

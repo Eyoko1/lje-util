@@ -130,21 +130,12 @@ function draw.SimpleTextOutlined(text, font, x, y, colour, xalign, yalign, outli
     local outlinewidthx = outlinewidth + x
     local outlinewidthy = outlinewidth + y
 
-    local xcache = x - outlinewidth
     local resety = y - outlinewidth
-    ::outlinex::
-    local ycache = resety
-    ::outliney::
-    surface_SetTextPos(xcache, ycache)
-    surface_DrawText(text)
-    if (ycache < outlinewidthy) then
-        ycache = ycache + steps
-        goto outliney
-    end
-    if (xcache < outlinewidthx) then
-        xcache = xcache + steps
-        ycache = resety
-        goto outlinex
+    for xcache = x - outlinewidth, outlinewidthx, steps do
+        for ycache = resety, outlinewidthy, steps do
+            surface_SetTextPos(xcache, ycache)
+            surface_DrawText(text)
+        end
     end
 
     surface_SetTextPos(x, y)
@@ -196,31 +187,28 @@ function draw.DrawText(text, font, x, y, colour, xalign)
     surface_SetTextColor(colour or white)
 
     local i = 1
-    ::outer::
-    local nextnewline = string_find(text, "\n", i)
-    local substring = string_sub(text, i, nextnewline)
 
-    local j = 1
-    ::inner::
-    local nexttab = string_find(substring, "\t", j)
-    if (nexttab) then
-        if (nexttab ~= j) then
-            currentx = currentx + __drawtext(string_sub(substring, j, nexttab), currentx, currenty, xalign)
+    while (true) do
+        local nextnewline = string_find(text, "\n", i)
+        local substring = string_sub(text, i, nextnewline)
+        local j = 1
+        while (true) do
+            local nexttab = string_find(substring, "\t", j)
+            if (nexttab) then
+                if (nexttab ~= j) then
+                    currentx = currentx + __drawtext(string_sub(substring, j, nexttab), currentx, currenty, xalign)
+                end
+
+                j = nexttab + 1
+                currentx = currentx + 50--[[tabwidth]]
+            else
+                __drawtext(string_sub(substring, j), currentx, currenty, xalign)
+                break
+            end
         end
-
-        j = nexttab + 1
-        currentx = currentx + 50--[[tabwidth]]
-        goto inner
-    else
-        __drawtext(string_sub(substring, j), currentx, currenty, xalign)
-        --> Fall through
-    end
-
-    if (nextnewline) then
         i = nextnewline + 1
         currentx = x
         currenty = currenty + lineheight
-        goto outer
     end
 end
 

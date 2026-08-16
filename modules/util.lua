@@ -73,18 +73,11 @@ local screenheight = ScrH()
 
 local table_remove = table.remove
 local function searchandremove(tbl, value, count)
-    if (count <= 0) then
-        return count
-    end
-
-    local i = 1
-    ::remove::
-    if (tbl[i] == value) then
-        table_remove(tbl, i)
-        return count - 1
-    elseif (i ~= count) then
-        i = i + 1
-        goto remove
+    for i = 1, count do
+        if (tbl[i] == value) then
+            table_remove(tbl, i)
+            return count - 1
+        end
     end
 
     return count
@@ -110,60 +103,27 @@ end
 --- @param callback fun(entity: Entity): nil
 --- @return nil
 function lje.util.iterate_players(callback)
-    if (otherplayercount == 0) then
-        return
+    for i = 1, otherplayercount do
+        callback(otherplayers[i])
     end
-
-    local i = 1
-    ::iterate_players::
-    callback(otherplayers[i])
-
-    if (i == otherplayercount) then
-        return
-    end
-
-    i = i + 1
-    goto iterate_players
 end
 
 --> Iterates over all NPCs and calls the given callback for each one
 --- @param callback fun(entity: Entity): nil
 --- @return nil
 function lje.util.iterate_npcs(callback)
-    if (npccount == 0) then
-        return
+    for i = 1, npccount do
+        callback(npcs[i])
     end
-
-    local i = 1
-    ::iterate_npcs::
-    callback(npcs[i])
-
-    if (i == npccount) then
-        return
-    end
-
-    i = i + 1
-    goto iterate_npcs
 end
 
 --> Iterates over all entities and calls the given callback for each one
 --- @param callback fun(entity: Entity): nil
 --- @return nil
 function lje.util.iterate_entities(callback)
-    if (entitycount == 0) then
-        return
+    for i = 1, entitycount do
+        callback(entities[i])
     end
-
-    local i = 1
-    ::iterate_entities::
-    callback(entities[i])
-
-    if (i == entitycount) then
-        return
-    end
-
-    i = i + 1
-    goto iterate_entities
 end
 
 --> Generates a random string
@@ -171,17 +131,9 @@ end
 --- @return string
 function lje.util.random_string(length)
     length = length or 32
-    if (length <= 0) then
-        return ""
-    end
 
-    local i = 1
-    ::fast_random_string::
-    rstringtable[i] = randomstringcharacters[math_random(1, randomstringcharactercount)]
-
-    if (i ~= length) then
-        i = i + 1
-        goto fast_random_string
+    for i = 1, length do
+        rstringtable[i] = randomstringcharacters[math_random(1, randomstringcharactercount)]
     end
 
     return table_concat(rstringtable, "", 1, length)
@@ -255,12 +207,8 @@ function lje.util.get_mutable_players()
     end
 
     local mutable = create_table(playercount, 0)
-    local i = 1
-    ::get_mutable_players::
-    mutable[i] = players[i]
-    if (i ~= playercount) then --> playercount is guaranteed to be at least 1, since the localplayer is in it
-        i = i + 1
-        goto get_mutable_players
+    for i = 1, playercount do
+        mutable[i] = players[i]
     end
 
     return mutable
@@ -292,12 +240,8 @@ function lje.util.get_mutable_entities()
     end
 
     local mutable = create_table(entitycount, 0)
-    local i = 1
-    ::get_mutable_entities::
-    mutable[i] = entities[i]
-    if (i ~= entitycount) then
-        i = i + 1
-        goto get_mutable_entities
+    for i = 1, entitycount do
+        mutable[i] = entities[i]
     end
 
     return mutable

@@ -50,19 +50,19 @@ hook.list = hooklist
 
 local function __addnode(root, identifier, callback)
     local node = root
-    ::add_node::
-    local nextnode = node[NODE_NEXT]
-    if (node[NODE_NAME] == identifier) then
-        node[NODE_CALLBACK] = callback
-        return
-    end
-    if (not nextnode) then
-        node[NODE_NEXT] = {identifier, callback, nil}
-        return
-    end
+    while (true) do
+        local nextnode = node[NODE_NEXT]
+        if (node[NODE_NAME] == identifier) then
+            node[NODE_CALLBACK] = callback
+            return
+        end
+        if (not nextnode) then
+            node[NODE_NEXT] = {identifier, callback, nil}
+            return
+        end
 
-    node = nextnode
-    goto add_node
+        node = nextnode
+    end
 end
 
 --> Registers a callback to be executed before the default GLua callbacks for a hook are executed
@@ -114,8 +114,7 @@ end
 local function __removenode(root, identifier)
     local last = root
     local node = root[NODE_NEXT]
-    ::remove_node::
-    if (node) then
+    while (node) do
         if (node[NODE_NAME] == identifier) then
             last[NODE_NEXT] = node[NODE_NEXT]
             return
@@ -123,7 +122,6 @@ local function __removenode(root, identifier)
 
         last = node
         node = node[NODE_NEXT]
-        goto remove_node
     end
 end
 
@@ -188,8 +186,7 @@ function hook.callpre(event, ...)
     end
 
     local node = hooks[PRE_HOOK_NODE]
-    ::call_pre::
-    if (node) then
+    while (node) do
         local success, a, b, c, d, e, f = pcall(node[NODE_CALLBACK], ...)
         if (success) then
             if (a ~= nil) then
@@ -200,7 +197,6 @@ function hook.callpre(event, ...)
         end
 
         node = node[NODE_NEXT]
-        goto call_pre
     end
 end
 
@@ -215,8 +211,7 @@ function hook.callpost(event, ...)
     end
 
     local node = hooks[POST_HOOK_NODE]
-    ::call_pre::
-    if (node) then
+    while (node) do
         local success, a, b, c, d, e, f = pcall(node[NODE_CALLBACK], ...)
         if (success) then
             if (a ~= nil) then
@@ -227,7 +222,6 @@ function hook.callpost(event, ...)
         end
 
         node = node[NODE_NEXT]
-        goto call_pre
     end
 end
 
@@ -320,11 +314,9 @@ lje.vm.add_pre_engine_call_hook(function(func, event, gm, a, b, c, d, e, f)
     inhookcall = false
 
     --> Run the post node
-    ::call_node::
-    postnode[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
-    postnode = postnode[3--[[NODE_NEXT]]]
-    if (postnode) then
-        goto call_node
+    while (postnode) do
+        postnode[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
+        postnode = postnode[3--[[NODE_NEXT]]]
     end
 end)
 

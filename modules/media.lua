@@ -10,14 +10,10 @@ lje.media = {
 
 local string_sub = string.sub
 local function getextension(path)
-    local negativelength = -(#path)
-    local i = -1
-    ::get_extension_loop::
-    if (string_sub(path, i, i) == ".") then
-        return string_sub(path, i)
-    elseif (i > negativelength) then
-        i = i - 1
-        goto get_extension_loop
+    for i = -1, -(#path), -1 do
+        if (string_sub(path, i, i) == ".") then
+            return string_sub(path, i)
+        end
     end
 end
 

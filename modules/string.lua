@@ -13,16 +13,11 @@ function string.ToTable(str)
     str = tostring(str)
 
     local length = #str
-    local i = 1
     local tbl = create_table(length, 0)
-    ::totable_loop::
-    tbl[i] = string_sub(str, i, i)
-
-    if (i ~= length) then
-        i = i + 1
-        goto totable_loop
+    for i = 1, length do
+        tbl[i] = string_sub(str, i, i)
     end
-    
+
     return tbl
 end
 
@@ -44,20 +39,18 @@ function string.Explode(separator, str, withpattern)
     local ret = {""} --> the table is guaranteed to have at least one element in it - this saves a re-allocation
 	local currentpos = 1
 
-    local i = 1
-    ::explode::
-    local startpos, endpos = string_find(str, separator, currentpos, dopattern)
-    if (startpos) then
-        ret[i] = string_sub(str, currentpos, startpos - 1)
-        currentpos = endpos + 1
-
-        i = i + 1
-        if (i ~= length) then
-            goto explode
+    for i = 1, length do
+        local startpos, endpos = string_find(str, separator, currentpos, dopattern)
+        if (startpos) then
+            ret[i] = string_sub(str, currentpos, startpos - 1)
+            currentpos = endpos + 1
+        else
+            length = i - 1
+            break
         end
     end
 
-	ret[i] = string_sub(str, currentpos)
+    ret[length + 1] = string_sub(str, currentpos)
 
 	return ret
 end
