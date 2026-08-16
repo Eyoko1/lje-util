@@ -239,6 +239,8 @@ local postnode
 
 local shouldcheck = true
 
+local pa, pb, pc, pd, pe, pf
+
 lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b, c, d, e, f)
     if (func ~= hookcall) then
         if (hookcall and not shouldcheck) then
@@ -303,10 +305,11 @@ lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b,
     postnode = hooks[2--[[POST_HOOK_NODE]]]
     if (postnode) then
         inhookcall = true
+        pa, pb, pc, pd, pe, pf = a, b, c, d, e, f
     end
 end)
 
-lje.vm.add_pre_engine_call_hook(function(func, event, gm, a, b, c, d, e, f)
+lje.vm.add_pre_engine_call_hook(function()
     if (not inhookcall) then
         return
     end
@@ -315,7 +318,7 @@ lje.vm.add_pre_engine_call_hook(function(func, event, gm, a, b, c, d, e, f)
 
     --> Run the post node
     while (postnode) do
-        postnode[2--[[NODE_CALLBACK]]](a, b, c, d, e, f)
+        postnode[2--[[NODE_CALLBACK]]](pa, pb, pc, pd, pe, pf)
         postnode = postnode[3--[[NODE_NEXT]]]
     end
 end)
