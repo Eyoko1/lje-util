@@ -206,9 +206,13 @@ function draw.DrawText(text, font, x, y, colour, xalign)
                 break
             end
         end
-        i = nextnewline + 1
-        currentx = x
-        currenty = currenty + lineheight
+        if (nextnewline) then
+            i = nextnewline + 1
+            currentx = x
+            currenty = currenty + lineheight
+        else
+            break
+        end
     end
 end
 
