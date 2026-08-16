@@ -14,6 +14,8 @@ lje.func = {}
 lje.gc = {}
 
 --- Functions for working with proxy objects in the secure state. When an engine call hook fires, table and userdata arguments are not copied — they are passed as lightweight proxy handles (light userdata) pointing at the host object. Proxies are arena-allocated and do not pin their referent, so they are only valid for the duration of the engine call that produced them. Do not store proxy handles.
+--- 
+--- A proxy remembers which universe its referent lives in, so `lje.proxy.copy` resolves it against the right state and registry whether the engine call came from the client or the menu.
 lje.proxy = {}
 
 --- Introspection for the currently running LJE script.
@@ -27,11 +29,15 @@ lje.secure = {}
 --- The namespace functions (`get`, `all`, `reload`) operate on the *currently executing* script, so they only work while your script is running — typically at load time. In deferred callbacks (hooks, render, timers) there is no current script; call `lje.settings.open()` once at load and use the returned settings object instead. See the [Settings guide](../guides/settings) for the full picture.
 lje.settings = {}
 
---- Read values out of another Lua universe — the game client (and, later, the menu) — from inside the secure state, **without ever holding a reference into it**.
+--- Read values out of another Lua universe — the game client or the main menu — from inside the secure state, **without ever holding a reference into it**.
 --- 
 --- Holding a live reference to a foreign object is detectable by adversarial scripts in that state, and a bare pointer into it can dangle if the foreign garbage collector runs. `lje.state.path` avoids both: you describe a traversal up front as a chain of inert operations, and only the terminal `:copy()` touches the foreign state. The whole walk runs in a single C call using raw lookups (no metamethods, no allocation in the foreign state), so the foreign GC cannot step mid-walk and no foreign pointer survives the call. The value you get back is a deep copy living entirely in the secure state.
 --- 
 --- Because of this, you can hold onto the **result** of `:copy()` freely — it is yours. What you must never do is try to keep a path pointed at something long-term and treat it as a live handle; a path is a recipe, evaluated fresh each time you call `:copy()`.
+--- 
+--- ### State handles come and go
+--- 
+--- The two handles below are re-bound whenever a state appears or is closed, and the client state is destroyed and recreated on every map change and disconnect. Read `lje.state.client` fresh each time rather than caching it in a local — a handle to a dead state is rejected by both `lje.state.path` and `lje.secure.pull`. Path objects and pulled functions record *which* universe they belong to rather than the state pointer itself, so those keep working across a state being recreated.
 lje.state = {}
 
 --- Miscellaneous utility functions for bytecode inspection, stack introspection, and table creation.
@@ -119,15 +125,32 @@ lje.includeCache = nil
 --- @return any R1 The return value of the included file, or the cached result from a prior call.
 function lje.require(path) end --- @diagnostic disable-line
 
---- A `string.format`-style console print with inline ANSI color support. Wrap text in `$colorName{...}` to colorize it.
+--- A `string.format`-style console print with inline ANSI color support.
 --- 
---- Supported colors: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `default`.
+--- - `$name{...}` sets the **foreground**.
+--- - `$$name{...}` sets the **background**.
+--- 
+--- Blocks nest, and closing one restores whatever was active around it, so you can combine layers: `$$blue{$white{text}}`.
+--- 
+--- **Color names**
+--- 
+--- - Base 8: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, plus `default`.
+--- - Bright variants: prefix with `bright` or `light` (`brightred`, `lightblue`, ...). `gray`/`grey` is the bright-black slot.
+--- - Extended: `orange`, `pink`, `hotpink`, `purple`, `violet`, `indigo`, `lime`, `mint`, `teal`, `turquoise`, `navy`, `maroon`, `olive`, `brown`, `gold`, `tan`, `salmon`, `coral`, `lavender`, `silver`, `slate`, `charcoal`, `cream`, `darkgreen`, `darkblue`, `darkred`.
+--- - Hex truecolor: `$#ff8800{...}` or the short form `$#f80{...}`.
+--- - Raw xterm-256 index: `$196{...}`, `$$21{...}`.
+--- 
+--- **Styles** (foreground syntax only): `bold`, `dim`, `italic`, `underline`, `blink`, `reverse`/`invert`, `hidden`, `strike`.
+--- 
+--- An unrecognized name is left in the output as-is rather than being swallowed, so typos are visible.
 --- 
 --- Example:
 --- ```lua
 --- lje.con_printf("$red{Error}: %s", message)
+--- lje.con_printf("$$red{$white{ FATAL }} $gray{disk on fire}")
+--- lje.con_printf("$#ff8800{warning} on $$#202020{a dark strip}")
 --- ```
---- @param fmt string A `string.format` format string. Color codes use the syntax `$colorName{text}`.
+--- @param fmt string A `string.format` format string. Color codes use the syntax `$colorName{text}` for the foreground and `$$colorName{text}` for the background.
 --- @param ... any? Format arguments, passed to `string.format`.
 function lje.con_printf(fmt, ...) end --- @diagnostic disable-line
 
@@ -145,20 +168,31 @@ function lje.proxy.copy(proxy) end --- @diagnostic disable-line
 --- @return table | nil R1 A table with `name`, `version`, `author` (strings) and `dependencies` (an array of `"author.name"` strings), or `nil` if there is no active script context.
 function lje.script.info() end --- @diagnostic disable-line
 
---- Resolves a dot-separated path in the host state's global environment using raw lookups (no metamethods) and brings the resulting value into the secure state.
+--- Resolves a dot-separated path in a host state's global environment using raw lookups (no metamethods) and brings the resulting value into the secure state.
 --- 
---- - Paths starting with `_R.` are resolved in the host registry instead of the global environment (e.g. `_R.Entity`).
---- - If the final value is a **C function**, it is wrapped in a secure dispatcher: calling the wrapper executes the original C function against the host state while redirecting its Lua C API activity (e.g. registry access) back to the secure state. Lua functions are rejected and `nil` is returned.
+--- - Paths starting with `_R.` are resolved in that host's registry instead of the global environment (e.g. `_R.Entity`).
+--- - If the final value is a **C function**, it is wrapped in a secure dispatcher: calling the wrapper executes the original C function against the host state it came from, while redirecting its Lua C API activity (e.g. registry access) back to the secure state. Lua functions are rejected and `nil` is returned.
 --- - Any other value is deep-copied into the secure state (see `lje.proxy.copy` for the copy semantics).
+--- 
+--- Which universe is read comes from the optional second argument, defaulting to the client. Each host keeps its own shadow registry, so a function pulled from the menu talks to the menu's interface and resolves its registry references against the menu — pulling the same name from both universes gives you two independent wrappers. Wrappers store which universe they belong to rather than a state pointer, so they survive that state being closed and recreated.
 --- 
 --- Returns `nil` if any path segment is missing, empty, or a non-table intermediate. Each failure case is logged to the console.
 --- @param name string A dot-separated path into the host global environment, e.g. `"Msg"` or `"player.GetAll"`. Prefix with `_R.` to resolve in the host registry.
+--- @param state lightuserdata? Which universe to pull from: `lje.state.client` (the default) or `lje.state.menu`. See `lje.state` for when each handle is available.
 --- @return any | nil R1 A secure wrapper (for C functions) or a copy of the value, or `nil` if the path could not be resolved or the value is a Lua function.
-function lje.secure.pull(name) end --- @diagnostic disable-line
+function lje.secure.pull(name, state) end --- @diagnostic disable-line
 
---- Forces state redirection on or off. While enabled, Lua C API calls made against the host state are transparently redirected to the secure state (registry accesses go to the shadow registry, etc.). This is normally managed automatically — wrappers returned by `lje.secure.pull` enable it for the duration of each call — so manual use is only needed for advanced control.
+--- Forces state redirection on or off. While enabled, Lua C API calls made against the host state are transparently redirected to the secure state (registry accesses go to the shadow registry, etc.). This is normally managed automatically — wrappers returned by `lje.secure.pull` enable it for the duration of each call, and set the universe the redirect belongs to — so manual use is only needed for advanced control.
+--- 
+--- Forcing it on by hand does not name a universe, so registry accesses land in the **client** shadow registry unless a wrapper is already running.
 --- @param force boolean `true` to force redirection to the secure state, `false` to disable it.
 function lje.secure.isolate(force) end --- @diagnostic disable-line
+
+--- A settings object bound to the calling script, or `nil` (with a console message) if there is no active script context.
+--- @class LJESettings
+--- @field get fun(self: LJESettings, key: string, default: any): any ["Reads a single setting from the current script's merged settings, by dotted path.", '', 'The key is traversed through nested tables, so `get("render.color")` returns `settings.render.color`. If any segment along the path is missing (or is not a table), `default` is returned when provided, otherwise `nil`.']
+--- @field all fun(self: LJESettings): table Returns the current script's full merged settings table (defaults overlaid with user overrides). The table is cached; treat it as read-only.
+--- @field reload fun(self: LJESettings): nil Drops the cached settings for the current script so the next `get`/`all` re-reads `settings.default.toml` and the user override file from disk.
 
 --- Reads a single setting from the current script's merged settings, by dotted path.
 --- 
@@ -178,19 +212,30 @@ function lje.settings.reload() end --- @diagnostic disable-line
 --- Binds a settings object to the **calling** script and returns it. Call this once at load time (while your script has an active context) and reuse the returned object anywhere — including deferred callbacks such as hooks, render, and timers, where the bare `get`/`all`/`reload` would not know which script is asking.
 --- 
 --- The object exposes `:get(key, default)`, `:all()`, and `:reload()`, which behave like the namespace functions but always resolve to the script that opened them.
---- @return userdata | nil R1 A settings object bound to the calling script, or `nil` (with a console message) if there is no active script context.
+--- @return LJESettings | nil R1 A settings object bound to the calling script, or `nil` (with a console message) if there is no active script context.
 function lje.settings.open() end --- @diagnostic disable-line
 
 --- Lower-level primitive behind `lje.settings.open()`. Returns a settings object bound to the script with the given name (its folder name, as returned by `lje.env.current_script()`).
 --- 
 --- Most scripts should use `lje.settings.open()` instead, which captures the calling script's name for you.
 --- @param name string The script (folder) name to bind to.
---- @return userdata R1 A settings object bound to the named script.
+--- @return LJESettings R1 A settings object bound to the named script.
 function lje.settings.bind(name) end --- @diagnostic disable-line
 
---- A handle to the game client's Lua state, for use as the first argument to `lje.state.path`. This is the state your scripts would normally run in. It is installed as a global in the secure state once the client state is known (at startup, before secure scripts run). A `LJE_MENU_STATE` handle is planned for the future.
+--- A path object. Chain `:index`, `:upvalue`, `:expect`, then `:copy()`.
+--- @class LJEPath
+--- @field index fun(self: LJEPath, key: string): LJEPath Raw-indexes the current value (which must be a table) by the string `key`.
+--- @field upvalue fun(self: LJEPath, n: integer): LJEPath Reads the `n`-th upvalue (1-based) of the current value, which must be a Lua or C function. Fast/builtin functions have no accessible upvalues and fail.
+--- @field expect fun(self: LJEPath, typename: string): LJEPath Asserts the current value's type and fails the path otherwise. Accepts Lua type names (`"table"`, `"function"`, `"userdata"`, …) and GMod metatypes by `MetaName` (`"Player"`, `"Vector"`, …), resolved from the object's metatable. GMod metatype takes priority over the bare Lua type. Opt-in — only add it where you want the guard
+--- @field copy fun(self: LJEPath): any Evaluates the whole chain against `target` and deep-copies the final value into the secure state. Returns the copy, or `nil` if any step fails (each failure is logged to the console). See `lje.proxy.copy` for the copy semantics.
+
+--- A handle to the game client's Lua state, for use as the first argument to `lje.state.path` or as the second argument to `lje.secure.pull`. This is the state your scripts would normally run in. It is bound once the client state is known — at startup, before secure scripts run — and is `nil` before that, which includes the whole time you sit in the main menu without a game loaded.
 --- @type lightuserdata
 lje.state.client = nil
+
+--- A handle to the main menu's Lua state, used the same way as `client`. The menu state comes up long before the client one, so this is bound by the time `boot.lua` runs and is the only universe reachable from there. It stays valid for the rest of the session.
+--- @type lightuserdata
+lje.state.menu = nil
 
 --- Begins a path into `target`, rooted at the global named `root`. Returns a **path object** — an inert builder. Each builder method appends one operation and returns the same object, so calls chain. Nothing reads from `target` until you call `:copy()`.
 --- 
@@ -207,7 +252,7 @@ lje.state.client = nil
 --- | `:expect(type)` | Asserts the current value's type and fails the path otherwise. Accepts Lua type names (`"table"`, `"function"`, `"userdata"`, …) and GMod metatypes by `MetaName` (`"Player"`, `"Vector"`, …), resolved from the object's metatable. GMod metatype takes priority over the bare Lua type. Opt-in — only add it where you want the guard. |
 --- | `:copy()` | Evaluates the whole chain against `target` and deep-copies the final value into the secure state. Returns the copy, or `nil` if any step fails (each failure is logged to the console). See `lje.proxy.copy` for the copy semantics. |
 --- 
---- If the root is missing or `nil`, or any operation fails — indexing a non-table, a missing key, taking an upvalue of a non-function or an out-of-range index, or a failed `:expect` — `:copy()` logs the reason and returns `nil`.
+--- If the root is missing or `nil`, or any operation fails — indexing a non-table, a missing key, taking an upvalue of a non-function or an out-of-range index, or a failed `:expect` — `:copy()` logs the reason and returns `nil`. The same applies if the target universe's state has been closed since the path was built.
 --- 
 --- ### Example
 --- 
@@ -220,9 +265,18 @@ lje.state.client = nil
 ---   :expect("table")   -- guard: make sure it really is a table
 ---   :copy()            -- deep-copy it into the secure state
 --- ```
---- @param target lightuserdata The state to read from, e.g. `LJE_CLIENT_STATE`.
+--- 
+--- The menu universe works identically — and is the only one available from `boot.lua`, since the client state does not exist yet at that point.
+--- 
+--- ```lua
+--- local openURL = lje.state.path(lje.state.menu, "gui")
+---   :index("OpenURL")
+---   :expect("function")
+---   :copy()
+--- ```
+--- @param target lightuserdata The state to read from: `lje.state.client` or `lje.state.menu`.
 --- @param root string A single global name in `target` to root the path at, e.g. `"team"`. Not a dotted path — chain `:index` to go deeper.
---- @return userdata R1 A path object. Chain `:index`, `:upvalue`, `:expect`, then `:copy()`.
+--- @return LJEPath R1 A path object. Chain `:index`, `:upvalue`, `:expect`, then `:copy()`.
 function lje.state.path(target, root) end --- @diagnostic disable-line
 
 --- Returns a FNV-1a hash of the bytecode of a Lua function. Useful as a stable identity for a function's compiled bytecode — two functions with identical source compiled identically will produce the same hash.
@@ -238,7 +292,7 @@ function lje.util.get_call_stack() end --- @diagnostic disable-line
 --- @return table R1 The Lua registry table.
 function lje.util.get_registry() end --- @diagnostic disable-line
 
---- Registers a Lua function that intercepts every Lua chunk the host (game) state loads. The callback runs in the secure state and receives the chunkname and the source code; it must return a string, which replaces the source that actually gets loaded. If the callback errors or returns a non-string, the original source is used unmodified. Only one callback can be active at a time — registering a new one replaces the previous.
+--- Registers a Lua function that intercepts every Lua chunk the client state loads (menu chunks are not intercepted). The callback runs in the secure state and receives the chunkname and the source code; it must return a string, which replaces the source that actually gets loaded. If the callback errors or returns a non-string, the original source is used unmodified. Only one callback can be active at a time — registering a new one replaces the previous.
 --- @param fn function A function of the form `fn(chunkname, source) -> string`. Must be a Lua function, not a C function.
 function lje.util.set_script_hook_callback(fn) end --- @diagnostic disable-line
 
@@ -252,7 +306,7 @@ function lje.util.create_table(narr, nrec) end --- @diagnostic disable-line
 --- @param value any The value to print.
 function lje.util.inspect(value) end --- @diagnostic disable-line
 
---- Registers an engine call hook for the current script. Whenever the engine invokes a Lua function in the host (game) state, every registered hook is invoked in the secure state as `fn(func, nargs, nresults, ...)`:
+--- Registers an engine call hook for the current script. Whenever the engine invokes a Lua function in the universe the hook was registered for, the hook is invoked in the secure state as `fn(func, nargs, nresults, ...)`:
 --- 
 --- - `func` — a number holding the called function's pointer (its address cast to a `lua_Number`). Useful for identity comparisons without copying a full function object across states.
 --- - `nargs` / `nresults` — the argument and result counts of the engine call.
@@ -265,18 +319,48 @@ function lje.util.inspect(value) end --- @diagnostic disable-line
 --- 
 --- Hooks fire in script load order; within a script they fire in registration order. All pre hooks across every script run before the real call, then all post hooks run after it. A script may register up to 16 hooks, and may freely mix pre and post hooks.
 --- 
---- The hook's return values are ignored — handling/suppressing engine calls is not currently supported. Errors thrown by a hook are caught and printed to the console; the remaining hooks still run. Requires an active script context, and hooks only fire for secure scripts.
+--- The hook's return values are ignored. A pre hook can stop the engine call from happening at all by calling `lje.vm.suppress_engine_call()`. Errors thrown by a hook are caught and printed to the console; the remaining hooks still run. Requires an active script context, and hooks only fire for secure scripts.
+--- 
+--- ### Which universe you are listening to
+--- 
+--- The optional `state` argument picks the universe, defaulting to the client. A hook only ever sees calls from the one universe it was registered for — to watch both, register twice. Proxy handles handed to the hook are resolved against that same universe, so `lje.proxy.copy` gives you the right object either way.
+--- 
+--- ```lua
+--- -- Watch the menu's engine calls. Valid from boot.lua, where the client
+--- -- state does not exist yet.
+--- lje.vm.add_engine_call_hook(function(func, nargs, nresults, ...)
+---   lje.con_print("menu called " .. func)
+--- end, false, lje.state.menu)
+--- ```
+--- 
+--- Hooks registered from `boot.lua` live for the whole process. Every other hook belongs to the client script lifecycle and is dropped when the client state goes away (a map change or disconnect), then re-registered when `main.lua` runs again — the same applies to a hot reload, which re-runs `main.lua` but not `boot.lua`.
 --- @param fn function Must be a Lua function, not a C function.
 --- @param is_post boolean? `true` to run the hook after the engine call, `false` (default) to run it before.
-function lje.vm.add_engine_call_hook(fn, is_post) end --- @diagnostic disable-line
+--- @param state lightuserdata? Whose engine calls to listen to: `lje.state.client` (the default) or `lje.state.menu`. See `lje.state` for when each handle is available.
+function lje.vm.add_engine_call_hook(fn, is_post, state) end --- @diagnostic disable-line
 
---- Convenience wrapper around `lje.vm.add_engine_call_hook(hook, false)` that registers `hook` as a pre hook (runs before the engine call). See `add_engine_call_hook` for the hook signature and semantics.
---- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.
-function lje.vm.add_pre_engine_call_hook(hook) end --- @diagnostic disable-line
+--- Suppresses the engine call that is currently being hooked. Only valid from inside a *pre* engine call hook (see `add_engine_call_hook`); calling it from a post hook, or outside of a hook entirely, raises an error since by then the engine call has already happened.
+--- 
+--- When a pre hook calls this:
+--- 
+--- - The real engine call never runs.
+--- - Every remaining hook for this call is cancelled — later pre hooks (in this script and in scripts after it) do not fire, and no post hooks fire either.
+--- - LJE reports the call to the engine as having succeeded and returned nothing; the engine's expected result slots are filled with `nil`.
+--- 
+--- The suppression only applies to the one engine call being hooked, and does not carry over to the next one. A hook that throws an error after calling this does *not* suppress the call — the suppression is discarded along with the error.
+--- 
+--- **Note:** Suppression can lead to detection. Only suppress engine calls that are safe to drop; nothing which may be an oracle for adversial scripts. `concommand.Run` is fine to suppress for example, but `Think` is not.
+function lje.vm.suppress_engine_call() end --- @diagnostic disable-line
 
---- Convenience wrapper around `lje.vm.add_engine_call_hook(hook, true)` that registers `hook` as a post hook (runs after the engine call, against a snapshot of the original arguments). See `add_engine_call_hook` for the hook signature and semantics.
+--- Convenience wrapper around `lje.vm.add_engine_call_hook(hook, false, state)` that registers `hook` as a pre hook (runs before the engine call). See `add_engine_call_hook` for the hook signature and semantics.
 --- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.
-function lje.vm.add_post_engine_call_hook(hook) end --- @diagnostic disable-line
+--- @param state lightuserdata? Whose engine calls to listen to: `lje.state.client` (the default) or `lje.state.menu`.
+function lje.vm.add_pre_engine_call_hook(hook, state) end --- @diagnostic disable-line
+
+--- Convenience wrapper around `lje.vm.add_engine_call_hook(hook, true, state)` that registers `hook` as a post hook (runs after the engine call, against a snapshot of the original arguments). See `add_engine_call_hook` for the hook signature and semantics.
+--- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.
+--- @param state lightuserdata? Whose engine calls to listen to: `lje.state.client` (the default) or `lje.state.menu`.
+function lje.vm.add_post_engine_call_hook(hook, state) end --- @diagnostic disable-line
 
 --- Legacy helper kept for backwards compatibility; equivalent to `lje.vm.add_pre_engine_call_hook(hook)`. Despite the `set_` name it *adds* a hook rather than replacing existing ones. Prefer `add_pre_engine_call_hook` or `add_post_engine_call_hook` in new code.
 --- @param hook function The hook function, called as `fn(func, nargs, nresults, ...)`.

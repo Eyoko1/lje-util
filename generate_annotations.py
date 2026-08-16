@@ -24,7 +24,7 @@ with zipfile.ZipFile(pathin, "r") as zip:
 
 os.remove(pathin)
 
-path = pathout + "\\lj-expand-expansion\\docs\\api"
+path = pathout + "\\lj-expand-expansion\\docs\\static\\api"
 
 #path = input("Path to 'lj-expand/docs/api':\t")
 
@@ -57,11 +57,12 @@ def parse(data: dict[str, JSONInstance]):
         namespaces.append(f"{getformatteddescription(data['description'])}\nlje.{namespace} = {{}}")
 
     for ljeclass in classes:
+        name = ljeclass["name"]
         line = []
         line.append("--- " + ljeclass["description"])
-        line.append("--- @class " + ljeclass["name"])
+        line.append("--- @class " + name)
         for method in ljeclass["methods"]:
-            params = []
+            params = [f"self: {name}"]
             for param in method["params"]:
                 params.append(f"{param['name']}: {param['type']}")
 
@@ -69,9 +70,13 @@ def parse(data: dict[str, JSONInstance]):
             for ret in method["returns"]:
                 returns.append(ret['type'])
 
+            if (len(returns) == 0):
+                returns.append("nil")
+
             funcdef = f"fun({', '.join(params)}): {', '.join(returns)}"
 
             line.append(f"--- @field {method['name']} {funcdef} {method['description']}")
+        output.append("\n".join(line))
     
     for const in constants:
         if (isbase and not const['name'].startswith("lje.")):
@@ -97,7 +102,7 @@ def parse(data: dict[str, JSONInstance]):
             string: str = ret['type']
             if (string.find("...") != -1):
                 string = "..."
-            line.append(f"--- @return {string}{'?' if (('optional' in param) and (param['optional'])) else ''} R{i} {ret['description']}")
+            line.append(f"--- @return {string}{'?' if (('optional' in ret) and (ret['optional'])) else ''} R{i} {ret['description']}")
             i = i + 1
         
         line.append(f"function {fprefix}{function['name']}({', '.join(params)}) end --- @diagnostic disable-line")
