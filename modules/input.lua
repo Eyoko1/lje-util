@@ -50,8 +50,8 @@ if (ffi) then
 
     local user32 = ffi.module.find("user32.dll") --- @cast user32 -nil
     local SendInput = ffi.module.bind_export(user32, "SendInput", "uupi") --- @cast SendInput -nil
-    local kernel32 = ffi.module.find("kernel32.dll") --- @cast kernel32 -nil
-    local GetLastError = ffi.module.bind_export(kernel32, "GetLastError", "s") --- @cast GetLastError -nil
+    --local kernel32 = ffi.module.find("kernel32.dll") --- @cast kernel32 -nil
+    --local GetLastError = ffi.module.bind_export(kernel32, "GetLastError", "u") --- @cast GetLastError -nil
 
     ffi.struct.define([[
     struct LJE_UTIL_MOUSEINPUT {
@@ -67,8 +67,9 @@ if (ffi) then
     };
     ]])
 
-    local mousestructsize = ffi.mem.sizeof("LJE_UTIL_MOUSEINPUT")
+    local mousestructsize = ffi.struct.sizeof("LJE_UTIL_MOUSEINPUT") --- @cast mousestructsize -nil
     local mousestruct = ffi.mem.alloc(mousestructsize)
+    ffi.mem.fill(mousestruct, 0, mousestructsize)
     local mousedata = {
         type = 0,
         dx = 0,
@@ -90,8 +91,9 @@ if (ffi) then
     };
     ]])
 
-    local keyboardstructsize = ffi.mem.sizeof("LJE_UTIL_KEYBOARDINPUT")
+    local keyboardstructsize = ffi.struct.sizeof("LJE_UTIL_KEYBOARDINPUT") --- @cast keyboardstructsize -nil
     local keyboardstruct = ffi.mem.alloc(keyboardstructsize)
+    ffi.mem.fill(keyboardstruct, 0, keyboardstructsize)
     local keyboarddata = {
         type = 1,
         wVk = 0,
@@ -152,7 +154,7 @@ if (ffi) then
     --- @param deltax number
     --- @param deltay number
     --- @return nil
-    function lje.input.sendmouse(deltax, deltay)
+    function lje.input.movemouse(deltax, deltay)
         mousedata.dx = deltax
         mousedata.dy = deltay
         mousedata.dwFlags = MOUSEEVENTF_MOVE

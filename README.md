@@ -4,7 +4,7 @@ A utility library made for [LJ-Expand](https://github.com/lj-expand/lj-expand/) 
 Before using lje-util, I recommend that you read through this file so that you are aware of all of the features that are provided and may be required.
 
 # Information
-- When rendering anything to the screen, push the safe rendertarget called 'lje.util.rendertarget'  to the screen before rendering, and then pop it after
+- When rendering anything to the screen outside of 'lje-util/(post)render', push the safe rendertarget called 'lje.util.rendertarget'  to the screen before rendering, and then pop it after
 - Do **not** modify the table returned by player.GetAll() or ents.GetAll()
 - In order to use the annotations provided by lje-util, you will need an extension such as sumneko's LuaLS extension for VSCode
 - If you are re-rendering the scene (for something like freecam), you must call lje.util.override_blend() before doing the rendering

@@ -309,7 +309,7 @@ lje.vm.add_pre_engine_call_hook(function(func, nargs, nresults, event, gm, a, b,
     end
 end)
 
-lje.vm.add_pre_engine_call_hook(function()
+lje.vm.add_post_engine_call_hook(function()
     if (not inhookcall) then
         return
     end
