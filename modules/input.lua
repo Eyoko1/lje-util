@@ -38,7 +38,7 @@ local hasinputcontext = false
 lje.input = {}
 
 local function nonhalting(message)
-    lje.con_printf("$red{lje-util error! : %s}")
+    lje.con_printf("$red{lje-util error! : %s}", message)
 end
 
 if (ffi) then
@@ -50,8 +50,9 @@ if (ffi) then
 
     local user32 = ffi.module.find("user32.dll") --- @cast user32 -nil
     local SendInput = ffi.module.bind_export(user32, "SendInput", "uupi") --- @cast SendInput -nil
-    --local kernel32 = ffi.module.find("kernel32.dll") --- @cast kernel32 -nil
-    --local GetLastError = ffi.module.bind_export(kernel32, "GetLastError", "u") --- @cast GetLastError -nil
+    local MapVirtualKeyW = ffi.module.bind_export(user32, "MapVirtualKeyW", "uuu") --- @cast MapVirtualKeyW -nil
+    local kernel32 = ffi.module.find("kernel32.dll") --- @cast kernel32 -nil
+    local GetLastError = ffi.module.bind_export(kernel32, "GetLastError", "u") --- @cast GetLastError -nil
 
     ffi.struct.define([[
     struct LJE_UTIL_MOUSEINPUT {
@@ -83,6 +84,8 @@ if (ffi) then
     ffi.struct.define([[
     struct LJE_UTIL_KEYBOARDINPUT {
         uint32_t type;
+        padding[12];
+
         uint16_t wVk;
         uint16_t wScan;
         uint32_t dwFlags;
@@ -103,6 +106,7 @@ if (ffi) then
         dwExtraInfo = 0
     }
 
+    --> Map of gmod key codes to scans (these are initially VKs)
     local keys = {
         [KEY_BACKSPACE] = 0x08,
         [KEY_TAB] = 0x09,
@@ -146,6 +150,11 @@ if (ffi) then
     --> 'F1' -> 'F12'
     for i = 0, 11 do
         keys[KEY_F1 + i] = 0x70 + i
+    end
+
+    --> Convert to scans
+    for i, v in pairs(keys) do
+        keys[i] = MapVirtualKeyW(v, 0)
     end
 
     --> Moves the mouse by the given delta x and y using the SendInput Windows API function
@@ -192,39 +201,39 @@ if (ffi) then
     end
 
     --> Presses the given key
-    --- @param key KEY | string This can either be a KEY_* enum, or a string which is the keycode
+    --- @param key KEY | string | integer This can either be a KEY_* enum, or a string which is the keycode
     function lje.input.keydown(key)
         if (type(key) == "string") then
             key = input.GetKeyCode(key)
         end
 
-        local vk = keys[key]
-        if (not vk) then
+        local scan = keys[key]
+        if (not scan) then
             nonhalting("lje.input.keydown called with invalid key: '" .. tostring(key) .. "'")
             return
         end
 
-        keyboarddata.wVk = vk
-        keyboarddata.dwFlags = 0
+        keyboarddata.wScan = scan
+        keyboarddata.dwFlags = 0x0008
         ffi.struct.write(keyboardstruct, "LJE_UTIL_KEYBOARDINPUT", keyboarddata)
         SendInput(1, keyboardstruct, keyboardstructsize)
     end
 
     --> Releases the given key
-    --- @param key KEY | string This can either be a KEY_* enum, or a string which is the keycode
+    --- @param key KEY | string | integer This can either be a KEY_* enum, or a string which is the keycode
     function lje.input.keyup(key)
         if (type(key) == "string") then
             key = input.GetKeyCode(key)
         end
 
-        local vk = keys[key]
-        if (not vk) then
+        local scan = keys[key]
+        if (not scan) then
             nonhalting("lje.input.keyup called with invalid key: '" .. tostring(key) .. "'")
             return
         end
 
-        keyboarddata.wVk = vk
-        keyboarddata.dwFlags = 0x0002
+        keyboarddata.wScan = scan
+        keyboarddata.dwFlags = 0x000A
         ffi.struct.write(keyboardstruct, "LJE_UTIL_KEYBOARDINPUT", keyboarddata)
         SendInput(1, keyboardstruct, keyboardstructsize)
     end
