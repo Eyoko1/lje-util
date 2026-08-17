@@ -2,7 +2,7 @@
 
 [script]
 name = "lje-util"
-version = "1.0.0"
+version = "1.1.0"
 author = "Eyoko1"
 url = "https://github.com/Eyoko1/lje-util/"
 dependencies = []
